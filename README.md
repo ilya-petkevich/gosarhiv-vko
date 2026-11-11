@@ -6,6 +6,18 @@
 
 Сайт **информационно-справочный**: здесь нет форм заявлений, заказов, оплаты и приёма обращений. Подать запрос на архивную справку можно на [eGov.kz](https://egov.kz) или через [e-Otinish](https://eotinish.kz), и сайт явно ведёт туда.
 
+## Комплект передачи
+
+| Документ | Что внутри |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | схема, модули, структура данных, безопасность, библиотеки и лицензии |
+| [docs/EDITOR_GUIDE.md](docs/EDITOR_GUIDE.md) | инструкция для сотрудников архива |
+| [docs/TEST_DATA.md](docs/TEST_DATA.md) | тестовые данные: источники и допустимость |
+| [docs/TEST_PROTOCOL.md](docs/TEST_PROTOCOL.md) | протокол тестирования, Lighthouse, отказ ИИ |
+| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | сценарий защиты и ответы на вопросы |
+| [docs/READINESS.md](docs/READINESS.md) | готовность модулей и ограничения |
+| [docs/DEPLOY.md](docs/DEPLOY.md), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | развёртывание и внешние сервисы |
+
 ## Запуск на своём компьютере
 
 Нужен Node.js 20.10 или новее. Базу данных ставить не нужно: без настроек используется встроенный PostgreSQL (PGlite) в папке `.data/`.
