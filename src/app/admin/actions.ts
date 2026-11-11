@@ -326,3 +326,156 @@ export async function rollbackImport(f: FormData) {
   await audit(u, "import.rollback", "import", id, "ok", { deleted: del.length, kept });
   redirect(`/admin/import/${id}?info=${encodeURIComponent(`Удалено записей: ${del.length}.` + (kept ? ` Оставлено ${kept}: они уже изменены или ушли на согласование.` : ""))}`);
 }
+
+// ---------- Подборки «Большого архива памяти» и онлайн-выставки ----------
+
+const TR: Record<string, string> = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ы: "y", э: "e", ю: "yu", я: "ya", ә: "a", ғ: "g", қ: "k", ң: "n", ө: "o", ұ: "u", ү: "u", һ: "h", і: "i" };
+const slugify = (t: string) =>
+  t.toLowerCase().split("").map((c) => TR[c] ?? c).join("").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "item";
+
+type SKind = "collection" | "exhibition";
+const isSKind = (k: string): k is SKind => k === "collection" || k === "exhibition";
+const STABLE: Record<SKind, string> = { collection: "collections", exhibition: "exhibitions" };
+
+async function needEdit(kind: SKind) {
+  const u = await need();
+  const { canEditEntity } = await import("@/lib/workflow");
+  if (!canEditEntity(u, kind)) {
+    await audit(u, `${kind}.edit`, kind, null, "denied");
+    redirect(`/admin/showcase?kind=${kind}&e=${encodeURIComponent("Недостаточно прав")}`);
+  }
+  return u;
+}
+
+export async function createShowcase(f: FormData) {
+  const kind = s(f, "kind", 20);
+  if (!isSKind(kind)) redirect("/admin/showcase");
+  const u = await needEdit(kind);
+  const title = s(f, "title_ru", 300);
+  const summary = s(f, "summary_ru", 2000);
+  if (!title) redirect(`/admin/showcase/${kind}/new?e=${encodeURIComponent("Заполните название")}`);
+  const slug = `${slugify(title)}-${Date.now().toString(36).slice(-4)}`;
+  const row = kind === "collection"
+    ? (await q<{ id: number }>(
+        `insert into collections(slug, title, summary, editorial_note, status, created_by) values ($1,$2,$3,$4,'draft',$5) returning id`,
+        [slug, { ru: title }, summary ? { ru: summary } : null, s(f, "editorial_ru", 2000) ? { ru: s(f, "editorial_ru", 2000) } : null, u.id],
+      ))[0]
+    : (await q<{ id: number }>(
+        `insert into exhibitions(slug, title, description, status, created_by) values ($1,$2,$3,'draft',$4) returning id`,
+        [slug, { ru: title }, summary ? { ru: summary } : null, u.id],
+      ))[0];
+  await audit(u, `${kind}.create`, kind, row.id, "ok");
+  redirect(`/admin/showcase/${kind}/${row.id}?m=created`);
+}
+
+async function backToReviewIfPublished(u: Staff, kind: SKind, id: number) {
+  // правка опубликованного без права публикации — снова на проверку
+  const st = (await q<{ status: string }>(`select status from ${STABLE[kind]} where id = $1`, [id]))[0]?.status;
+  if (st === "published" && !can(u, "content.publish")) {
+    await q(`update ${STABLE[kind]} set status = 'review', published_at = null where id = $1`, [id]);
+    await q(`insert into workflow_transitions(entity_type, entity_id, from_status, to_status, actor_id, comment) values ($1,$2,'published','review',$3,'Изменено после публикации — повторная проверка')`, [kind, id, u.id]);
+  }
+}
+
+export async function saveShowcase(f: FormData) {
+  const kind = s(f, "kind", 20);
+  if (!isSKind(kind)) redirect("/admin/showcase");
+  const u = await needEdit(kind);
+  const id = Number(s(f, "id", 12));
+  const title = s(f, "title_ru", 300);
+  if (!title) redirect(`/admin/showcase/${kind}/${id}?e=${encodeURIComponent("Заполните название")}`);
+  const summary = s(f, "summary_ru", 2000);
+  if (kind === "collection") {
+    const ed = s(f, "editorial_ru", 2000);
+    await q(`update collections set title = $2, summary = $3, editorial_note = $4, updated_at = now(), version = version + 1 where id = $1`, [
+      id, { ru: title }, summary ? { ru: summary } : null, ed ? { ru: ed } : null,
+    ]);
+  } else {
+    await q(`update exhibitions set title = $2, description = $3, updated_at = now(), version = version + 1 where id = $1`, [id, { ru: title }, summary ? { ru: summary } : null]);
+  }
+  await backToReviewIfPublished(u, kind, id);
+  await audit(u, `${kind}.update`, kind, id, "ok");
+  redirect(`/admin/showcase/${kind}/${id}?m=saved`);
+}
+
+export async function addShowcaseItem(f: FormData) {
+  const kind = s(f, "kind", 20);
+  if (!isSKind(kind)) redirect("/admin/showcase");
+  const u = await needEdit(kind);
+  const id = Number(s(f, "id", 12));
+  const what = s(f, "what", 10);
+  const query = s(f, "query", 300);
+  const note = s(f, "note", 1000);
+  const back = (e: string) => redirect(`/admin/showcase/${kind}/${id}?e=${encodeURIComponent(e)}`);
+  if (!query) back("Укажите шифр или название");
+  const sort = (await q<{ n: number }>(
+    kind === "collection" ? `select coalesce(max(sort), -1)::int + 1 n from collection_items where collection_id = $1` : `select coalesce(max(sort), -1)::int + 1 n from exhibits where exhibition_id = $1`,
+    [id],
+  ))[0].n;
+  if (what === "event" && kind === "collection") {
+    const ev = (await q<{ id: number; sources: string; title: { ru: string } }>(
+      `select id, sources, title from historical_events where status = 'published' and title->>'ru' ilike $1 order by year limit 1`,
+      [`%${query.replace(/[%_]/g, "")}%`],
+    ))[0];
+    if (!ev) back(`Событие «${query}» не найдено в хронологии`);
+    await q(`insert into collection_items(collection_id, item_type, item_id, body, source, sort) values ($1,'event',$2,$3,$4,$5)`, [id, ev.id, note ? { ru: note } : null, ev.sources, sort]);
+    await backToReviewIfPublished(u, kind, id);
+    await audit(u, `${kind}.add_item`, kind, id, "ok", { event: ev.id });
+    redirect(`/admin/showcase/${kind}/${id}?info=${encodeURIComponent(`Добавлено событие: «${ev.title.ru}»`)}`);
+  }
+  // только опубликованные записи с открытым описанием: в подборку и на выставку попадают разрешённые материалы
+  const doc = (await q<{ id: number; cipher: string; title: { ru: string }; file: number | null }>(
+    `select d.id, d.cipher, d.title,
+            (select x.file_id from document_files x join digital_files m on m.id = x.file_id where x.document_id = d.id and m.access = 'public' order by x.sort limit 1) as file
+     from documents d join funds f on f.id = d.fund_id
+     where d.publish_status = 'public' and d.status = 'published' and f.publish_status = 'public' and f.status = 'published'
+       and (lower(d.cipher) = lower($1) or d.title->>'ru' ilike $2)
+     order by (lower(d.cipher) = lower($1)) desc, d.id limit 1`,
+    [query, `%${query.replace(/[%_]/g, "")}%`],
+  ))[0];
+  if (!doc) back(`Среди опубликованных открытых записей каталога нет «${query}». Добавлять можно только их.`);
+  if (kind === "collection") {
+    await q(`insert into collection_items(collection_id, item_type, item_id, body, source, sort) values ($1,'document',$2,$3,$4,$5)`, [id, doc.id, note ? { ru: note } : null, doc.cipher, sort]);
+  } else {
+    if (!note) back("Для экспоната нужна подпись");
+    await q(
+      `insert into exhibits(exhibition_id, title, caption, source, document_id, file_id, rights_checked, sort) values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, doc.title, { ru: note }, doc.cipher, doc.id, doc.file, f.get("rights") === "on", sort],
+    );
+  }
+  await backToReviewIfPublished(u, kind, id);
+  await audit(u, `${kind}.add_item`, kind, id, "ok", { document: doc.id });
+  redirect(`/admin/showcase/${kind}/${id}?info=${encodeURIComponent(`Добавлено: «${doc.title.ru}» (${doc.cipher})`)}`);
+}
+
+export async function removeShowcaseItem(f: FormData) {
+  const kind = s(f, "kind", 20);
+  if (!isSKind(kind)) redirect("/admin/showcase");
+  const u = await needEdit(kind);
+  const id = Number(s(f, "id", 12));
+  const item = Number(s(f, "item", 12));
+  await q(kind === "collection" ? `delete from collection_items where id = $1 and collection_id = $2` : `delete from exhibits where id = $1 and exhibition_id = $2`, [item, id]);
+  await backToReviewIfPublished(u, kind, id);
+  await audit(u, `${kind}.remove_item`, kind, id, "ok", { item });
+  redirect(`/admin/showcase/${kind}/${id}?m=saved`);
+}
+
+export async function toggleRights(f: FormData) {
+  const u = await needEdit("exhibition");
+  const id = Number(s(f, "id", 12));
+  const item = Number(s(f, "item", 12));
+  const on = s(f, "on", 2) === "1";
+  await q(`update exhibits set rights_checked = $3 where id = $1 and exhibition_id = $2`, [item, id, on]);
+  await audit(u, "exhibition.rights", "exhibit", item, "ok", { rights_checked: on });
+  redirect(`/admin/showcase/exhibition/${id}?m=saved`);
+}
+
+export async function showcaseTransition(f: FormData) {
+  const u = await need();
+  const kind = s(f, "kind", 20);
+  if (!isSKind(kind)) redirect("/admin/showcase");
+  const id = Number(s(f, "id", 12));
+  const { transitionEntity } = await import("@/lib/workflow");
+  const r = await transitionEntity(u, kind, id, s(f, "t", 20) as Transition, s(f, "comment", 1000));
+  redirect(`/admin/showcase/${kind}/${id}?${r.ok ? `m=${s(f, "t", 20)}` : `e=${encodeURIComponent(r.error)}`}`);
+}

@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ? [
         { href: "/admin", label: "Сводка", show: true },
         { href: "/admin/catalog", label: "Электронный каталог", show: can(u, "catalog.edit", "content.create", "content.edit", "content.review", "content.publish") },
+        { href: "/admin/showcase", label: "Подборки и выставки", show: can(u, "memory.edit", "exhibitions.edit", "content.review", "content.publish") },
         { href: "/admin/import", label: "Импорт и выгрузка", show: can(u, "catalog.import") },
         { href: "/admin/branches", label: "Филиалы", show: can(u, "branches.edit_all", "branches.edit_own") },
         { href: "/admin/users", label: "Пользователи и роли", show: can(u, "users.manage") },

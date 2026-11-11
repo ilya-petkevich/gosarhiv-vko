@@ -9,6 +9,7 @@ import { getDb } from "../src/lib/db";
 import { ROLES, PERMISSIONS, ROLE_PERMISSIONS, DEMO_USERS } from "../db/seed/roles";
 import { BRANCHES, APPROX_COORDS } from "../db/seed/branches";
 import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
+import { DEMO_EXHIBITIONS, DEMO_COLLECTIONS } from "../db/seed/showcase";
 import { putFile } from "../src/lib/storage";
 
 async function migrate() {
@@ -80,6 +81,8 @@ async function seed() {
 
   await seedFunds();
   await seedDemoCatalog();
+  await seedChronicle();
+  await seedShowcase();
 
   await db.query(
     `insert into site_settings(key, value) values ('contacts', $1) on conflict (key) do nothing`,
@@ -189,6 +192,78 @@ async function seedDemoCatalog() {
     }
   }
   if (added) console.log(`  демо-документы: ${added}`);
+}
+
+// Хронология из календарей памятных дат (scripts/convert/calendar_from_docx.py)
+async function seedChronicle() {
+  const db = await getDb();
+  if ((await db.query<{ n: number }>(`select count(*)::int n from historical_events`))[0].n > 0) return;
+  const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "seed", "data", "chronicle-events.json"), "utf8")) as {
+    themes: { key: string; label: string }[];
+    events: { year: number; month: number | null; day: number | null; date_text: string; text: string; theme: string; sources: string[] }[];
+  };
+  for (const [i, t] of data.themes.entries()) {
+    await db.query(`insert into categories(kind, slug, name, sort) values ('chronicle',$1,$2,$3) on conflict (kind, slug) do nothing`, [t.key, { ru: t.label }, i]);
+  }
+  const cats = new Map((await db.query<{ id: number; slug: string }>(`select id, slug from categories where kind = 'chronicle'`)).map((c) => [c.slug, c.id]));
+  await db.tx(async (query) => {
+    for (const [i, e] of data.events.entries()) {
+      await query(
+        `insert into historical_events(slug, title, date_text, year, category_id, sources, status) values ($1,$2,$3,$4,$5,$6,'published') on conflict (slug) do nothing`,
+        [`ev-${e.year}-${i}`, { ru: e.text }, e.date_text, e.year, cats.get(e.theme) ?? null,
+         `Календарь юбилейных и памятных дат ВКО на ${e.sources.join(", ")} год (материалы архива)`],
+      );
+    }
+  });
+  console.log(`  события хронологии: ${data.events.length}`);
+}
+
+async function seedShowcase() {
+  const db = await getDb();
+  const docId = async (key: string) =>
+    (await db.query<{ id: number; file: number | null }>(
+      `select d.id, (select x.file_id from document_files x where x.document_id = d.id order by x.sort limit 1) as file from documents d where d.uid = md5('demo:' || $1::text)::uuid`,
+      [key],
+    ))[0];
+  for (const ex of DEMO_EXHIBITIONS) {
+    const r = await db.query<{ id: number }>(
+      `insert into exhibitions(slug, title, description, status, is_demo, published_at) values ($1,$2,$3,'published',true,now()) on conflict (slug) do nothing returning id`,
+      [ex.slug, ex.title, ex.description],
+    );
+    if (!r.length) continue;
+    for (const [i, it] of ex.items.entries()) {
+      const d = await docId(it.doc);
+      if (!d) continue;
+      const doc = (await db.query<{ title: { ru: string }; cipher: string }>(`select title, cipher from documents where id = $1`, [d.id]))[0];
+      await db.query(
+        `insert into exhibits(exhibition_id, title, caption, source, document_id, file_id, rights_checked, sort) values ($1,$2,$3,$4,$5,$6,true,$7)`,
+        [r[0].id, doc.title, { ru: it.caption }, doc.cipher, d.id, d.file, i],
+      );
+    }
+  }
+  for (const c of DEMO_COLLECTIONS) {
+    const r = await db.query<{ id: number }>(
+      `insert into collections(slug, title, summary, editorial_note, status, is_demo, published_at) values ($1,$2,$3,$4,'published',true,now()) on conflict (slug) do nothing returning id`,
+      [c.slug, c.title, c.summary, c.editorial],
+    );
+    if (!r.length) continue;
+    for (const [i, it] of c.items.entries()) {
+      if ("doc" in it) {
+        const d = await docId(it.doc);
+        if (!d) continue;
+        const cipher = (await db.query<{ cipher: string }>(`select cipher from documents where id = $1`, [d.id]))[0].cipher;
+        await db.query(`insert into collection_items(collection_id, item_type, item_id, body, source, sort) values ($1,'document',$2,$3,$4,$5)`, [
+          r[0].id, d.id, it.note ? { ru: it.note } : null, cipher, i,
+        ]);
+      } else {
+        const ev = (await db.query<{ id: number; sources: string }>(`select id, sources from historical_events where title->>'ru' ilike $1 limit 1`, [`%${it.eventLike}%`]))[0];
+        if (!ev) continue;
+        await db.query(`insert into collection_items(collection_id, item_type, item_id, body, source, sort) values ($1,'event',$2,$3,$4,$5)`, [
+          r[0].id, ev.id, it.note ? { ru: it.note } : null, ev.sources, i,
+        ]);
+      }
+    }
+  }
 }
 
 (async () => {
