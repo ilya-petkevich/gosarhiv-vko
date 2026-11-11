@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { LANGS, dict, isLang, type Lang } from "@/i18n/dict";
 import { Header, Footer } from "@/components/Chrome";
 import "../globals.css";
+import { NOINDEX, SITE_URL } from "@/lib/site";
 
 // Onest и Literata содержат казахские буквы (Ә, Ғ, Қ, Ң, Ө, Ұ, Ү, Һ, І)
 const onest = Onest({ subsets: ["latin", "cyrillic", "cyrillic-ext"], variable: "--font-onest", display: "swap" });
@@ -15,6 +16,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   if (!isLang(lang)) return {};
   const d = dict(lang);
   return {
+    metadataBase: new URL(SITE_URL),
+    ...(NOINDEX ? { robots: { index: false, follow: false } } : {}),
     title: { default: d.orgName, template: `%s — ${d.orgShort}` },
     description: d.helloText,
     alternates: { languages: Object.fromEntries(LANGS.map((l) => [l, `/${l}`])) },

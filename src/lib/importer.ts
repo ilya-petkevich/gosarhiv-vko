@@ -11,7 +11,7 @@ import { readSheet } from "read-excel-file/node";
 import { DOC_TYPES } from "./catalog";
 import { q } from "./db";
 
-export const MAX_IMPORT_MB = 5;
+export const MAX_IMPORT_MB = process.env.VERCEL ? 4 : 5;
 export const MAX_ROWS = 5000;
 
 export const FIELDS = [

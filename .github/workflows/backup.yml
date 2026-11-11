@@ -1,0 +1,37 @@
+# Ночной бэкап базы (ТЗ 7.3). Дамп шифруется и хранится как артефакт 14 дней.
+# Нужны секреты DATABASE_URL (прямое подключение Supabase, порт 5432) и BACKUP_PASSPHRASE. Без них — пропуск.
+# Расшифровка: gpg --decrypt gavko.dump.gpg > gavko.dump && pg_restore -d <база> gavko.dump
+name: Бэкап базы
+on:
+  schedule:
+    - cron: "40 21 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверка секретов
+        id: check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then echo "skip=1" >> "$GITHUB_OUTPUT"; echo "Секреты не заданы — пропуск"; fi
+      - name: Дамп и шифрование
+        if: steps.check.outputs.skip != '1'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          docker run --rm -e DATABASE_URL postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public "$DATABASE_URL"' > gavko.dump
+          test -s gavko.dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 -o gavko.dump.gpg gavko.dump
+          rm gavko.dump
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.skip != '1'
+        with:
+          name: gavko-db-${{ github.run_id }}
+          path: gavko.dump.gpg
+          retention-days: 14

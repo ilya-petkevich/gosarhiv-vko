@@ -9,7 +9,8 @@ import sharp from "sharp";
 import { putFile } from "./storage";
 import { q } from "./db";
 
-export const MAX_FILE_MB = Number(process.env.MAX_UPLOAD_MB || 25);
+// на Vercel тело запроса ограничено 4,5 МБ — там лимит 4 МБ на файл (для больших сканов нужна прямая загрузка в хранилище)
+export const MAX_FILE_MB = Number(process.env.MAX_UPLOAD_MB || (process.env.VERCEL ? 4 : 25));
 const TYPES = [
   { mime: "image/jpeg", ext: "jpg", test: (b: Buffer) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   { mime: "image/png", ext: "png", test: (b: Buffer) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },

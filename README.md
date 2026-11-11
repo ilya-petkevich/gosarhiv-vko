@@ -69,4 +69,4 @@ docs/            готовность модулей, ограничения
 - Координаты филиалов не заданы: их подтверждает архив (доп. ТЗ 3.3).
 - Демонстрационные записи каталога, новости и изображения помечены как «демо».
 
-Готовность модулей — в [docs/READINESS.md](docs/READINESS.md).
+Готовность модулей — в [docs/READINESS.md](docs/READINESS.md), внешние сервисы — в [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md), выкладка стенда — в [docs/DEPLOY.md](docs/DEPLOY.md).
