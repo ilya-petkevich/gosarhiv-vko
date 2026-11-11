@@ -60,11 +60,27 @@ function SourceCard({ s, n, lang, t }: { s: Source; n: number; lang: string; t: 
   );
 }
 
+// Разговор хранится только во вкладке браузера (sessionStorage), на сервере — нет.
+// Нужно, чтобы при возврате «Назад» ответ остался как был: без повторного запроса и без повторной анимации.
+const STORE = "akhmet-chat";
+type Saved = { lang: string; initial: string; items: Item[] };
+
+function readSaved(): Saved | null {
+  try {
+    const s = sessionStorage.getItem(STORE);
+    return s ? (JSON.parse(s) as Saved) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AkhmetChat({ lang, t, initial }: { lang: string; t: L; initial?: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
+  const [stillUpTo, setStillUpTo] = useState(0); // ответы до этого номера восстановлены — без анимации
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const started = useRef(false);
+  const restored = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   const send = async (q: string) => {
@@ -86,31 +102,52 @@ export function AkhmetChat({ lang, t, initial }: { lang: string; t: L; initial?:
   };
 
   useEffect(() => {
-    if (initial && !started.current) {
-      started.current = true;
-      void send(initial);
+    if (started.current) return;
+    started.current = true;
+    const saved = readSaved();
+    if (saved && saved.lang === lang && saved.initial === (initial ?? "") && saved.items.length) {
+      restored.current = true;
+      setStillUpTo(saved.items.length);
+      setItems(saved.items);
+      return;
     }
+    if (initial) void send(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (busy) return;
+    const done = items.filter((it) => it.a || it.error);
+    if (!done.length) return;
+    try {
+      sessionStorage.setItem(STORE, JSON.stringify({ lang, initial: initial ?? "", items: done } satisfies Saved));
+    } catch {
+      /* приватный режим — просто не запоминаем */
+    }
+  }, [items, busy, lang, initial]);
+
+  useEffect(() => {
+    if (restored.current) {
+      restored.current = false; // после «Назад» браузер сам вернёт прокрутку
+      return;
+    }
+    if (items.length) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [items]);
 
   return (
     <div className="chat">
       <div className="chat-log" aria-live="polite">
         {items.map((it, i) => (
-          <div className="turn" key={i}>
+          <div className={i < stillUpTo ? "turn still" : "turn"} key={i}>
             <div className="q-bubble">{it.q}</div>
             <div className="a-row">
-              <Kniga size={56} mood={it.a ? it.a.mood : it.error ? "sad" : "think"} />
+              <Kniga size={48} mood={it.a ? it.a.mood : it.error ? "sad" : "think"} />
               <div className="a-col">
-                {!it.a && !it.error ? <div className="card a-card muted">{t.thinking}</div> : null}
-                {it.error ? <div className="card a-card">{t.error}</div> : null}
+                {!it.a && !it.error ? <div className="card a-card muted rise">{t.thinking}<span className="thinking" aria-hidden="true"><i /><i /><i /></span></div> : null}
+                {it.error ? <div className="card a-card rise">{t.error}</div> : null}
                 {it.a ? (
                   <>
-                    <div className="card a-card">
+                    <div className="card a-card rise">
                       {it.a.mode === "template" || it.a.mode === "empty" ? <span className="tag" style={{ marginBottom: 12 }}>{t.templateTag}</span> : null}
                       {it.a.mode === "restricted" ? <span className="tag red" style={{ marginBottom: 12 }}><Icon name="lock" size={16} /> {t.restrictedTag}</span> : null}
                       {it.a.notice === "masked" ? <p className="notice">{t.masked}</p> : null}

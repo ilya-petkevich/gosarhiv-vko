@@ -4,6 +4,7 @@ import { Onest } from "next/font/google";
 import { currentStaff, can } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logoutAction } from "./actions";
+import { AdmNav } from "@/components/AdmNav";
 import "../globals.css";
 
 const onest = Onest({ subsets: ["latin", "cyrillic", "cyrillic-ext"], variable: "--font-onest", display: "swap" });
@@ -51,13 +52,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           ) : null}
         </header>
-        <div className="adm-body">
-          {u ? (
-            <nav className="adm-nav" aria-label="Разделы админки">
-              {nav.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
-              <a href="/ru" target="_blank" rel="noopener">Открыть сайт ↗</a>
-            </nav>
-          ) : null}
+        <div className={u ? "adm-body" : "adm-body solo"}>
+          {u ? <AdmNav items={nav.map(({ href, label }) => ({ href, label }))} /> : null}
           <main id="main" className="adm-main">{children}</main>
         </div>
       </body>

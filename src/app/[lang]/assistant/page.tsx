@@ -30,7 +30,7 @@ export default async function Assistant({ params, searchParams }: { params: Prom
       <div className="ai-grid">
         <aside className="ai-side">
           <div className="card ai-card">
-            <Kniga size={120} title="Ахмет" />
+            <Kniga size={100} title="Ахмет" />
             <h1 className="h3">{t.title}</h1>
             <p className="small muted">{t.about}</p>
             {AI_INFO.model ? <p className="small muted">{providerNote(AI_INFO.model)}</p> : <span className="tag">{t.templateTag}</span>}

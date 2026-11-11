@@ -62,7 +62,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
           <div className="hero-main">
             <div className="akhmet">
-              <Kniga size={180} title="Ахмет" />
+              <Kniga size={140} title="Ахмет" />
               <div className="bubble">
                 <b>{d.hello}</b>
                 <br />
@@ -119,7 +119,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <p>{d.certText}</p>
           </div>
           <div className="acts">
-            <Link className="btn" href={L("services/gov")}>{d.certSteps}</Link>
+            <Link className="btn brand" href={L("services/gov")}>{d.certSteps}</Link>
             <a className="btn sec" href="https://egov.kz" rel="noopener" target="_blank">
               <Icon name="globe" size={20} /> {d.toEgov}
               <span className="sr"> ({d.externalSite})</span>

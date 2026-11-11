@@ -16,6 +16,8 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const { e } = await searchParams;
   return (
     <div className="card adm-login">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="logo" src="/img/logo-gavko.png" alt="" width={64} height={64} />
       <h1 className="h3">Вход для сотрудников архива</h1>
       {e && MSG[e] ? <p className={`notice${e === "bye" ? " ok" : ""}`} role="alert">{MSG[e]}</p> : null}
       <form action={loginAction} className="adm-form">
