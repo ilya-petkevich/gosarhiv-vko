@@ -8,6 +8,8 @@ import bcrypt from "bcryptjs";
 import { getDb } from "../src/lib/db";
 import { ROLES, PERMISSIONS, ROLE_PERMISSIONS, DEMO_USERS } from "../db/seed/roles";
 import { BRANCHES } from "../db/seed/branches";
+import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
+import { putFile } from "../src/lib/storage";
 
 async function migrate() {
   const db = await getDb();
@@ -71,6 +73,9 @@ async function seed() {
     }
   }
 
+  await seedFunds();
+  await seedDemoCatalog();
+
   await db.query(
     `insert into site_settings(key, value) values ('contacts', $1) on conflict (key) do nothing`,
     [{
@@ -81,6 +86,104 @@ async function seed() {
       source: "Контакты.docx (материалы заказчика)",
     }],
   );
+}
+
+type FundJson = {
+  number: string; title: string; names: { dates: string | null; name: string }[]; kind: string; secret: boolean;
+  year_from: number | null; year_to: number | null; units_text: string | null; cases_count: number | null;
+  first_received: string | null; ownership: string | null; category: string | null; note: string | null; source: string;
+};
+
+async function mainBranchId() {
+  const db = await getDb();
+  return (await db.query<{ id: number }>(`select id from branches where is_main limit 1`))[0].id;
+}
+
+// Перечень фондов архива (перенос со старого сайта, ТЗ 11). Секретные фонды не публикуются.
+async function seedFunds() {
+  const db = await getDb();
+  const have = (await db.query<{ n: number }>(`select count(*)::int as n from funds where not is_demo`))[0].n;
+  if (have > 0) return;
+  const file = path.join(process.cwd(), "db", "seed", "data", "funds-2018.json");
+  const funds: FundJson[] = JSON.parse(fs.readFileSync(file, "utf8"));
+  const branch = await mainBranchId();
+  await db.tx(async (query) => {
+    for (const f of funds) {
+      await query(
+        `insert into funds(branch_id, fund_number, kind, title, year_from, year_to, cases_count, publish_status, status,
+                           names, names_text, units_text, first_received, ownership, fund_category, note, source)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,'published',$9,$10,$11,$12,$13,$14,$15,$16)
+         on conflict (branch_id, fund_number) do nothing`,
+        [
+          branch, f.number, f.kind, { ru: f.title }, f.year_from, f.year_to, f.cases_count,
+          f.secret ? "no_publish" : "public",
+          JSON.stringify(f.names), f.names.map((n) => n.name).join(" "), f.units_text, f.first_received,
+          f.ownership, f.category, f.note, f.source,
+        ],
+      );
+    }
+  });
+  console.log(`  фонды: ${funds.length} (секретных, не публикуются: ${funds.filter((f) => f.secret).length})`);
+}
+
+async function seedDemoCatalog() {
+  const db = await getDb();
+  const branch = await mainBranchId();
+  const fundIds: Record<string, number> = {};
+  for (const f of DEMO_FUNDS) {
+    await db.query(
+      `insert into funds(branch_id, fund_number, kind, title, year_from, year_to, publish_status, status, is_demo, source, annotation)
+       values ($1,$2,'organization',$3,$4,$5,'public','published',true,'Демонстрационные данные',$6)
+       on conflict (branch_id, fund_number) do nothing`,
+      [branch, f.number, f.title, f.year_from, f.year_to, { ru: "Демонстрационный фонд для показа возможностей каталога. Записи и шифры условные." }],
+    );
+    fundIds[f.number] = (await db.query<{ id: number }>(`select id from funds where branch_id = $1 and fund_number = $2`, [branch, f.number]))[0].id;
+  }
+
+  let added = 0;
+  for (const [i, d] of DEMO_DOCS.entries()) {
+    const fundId = fundIds[d.fund];
+    const invTitle = DEMO_FUNDS.find((f) => f.number === d.fund)!.inv;
+    await db.query(
+      `insert into inventories(fund_id, number, title, publish_status, status, is_demo) values ($1,$2,$3,'public','published',true)
+       on conflict (fund_id, number) do nothing`,
+      [fundId, d.inv, { ru: d.inv === "1" ? invTitle : `${invTitle}, опись ${d.inv}` }],
+    );
+    const invId = (await db.query<{ id: number }>(`select id from inventories where fund_id = $1 and number = $2`, [fundId, d.inv]))[0].id;
+    await db.query(
+      `insert into cases(inventory_id, number, title, publish_status, status, is_demo) values ($1,$2,$3,'public','published',true)
+       on conflict (inventory_id, number) do nothing`,
+      [invId, d.case, { ru: d.case_title }],
+    );
+    const caseId = (await db.query<{ id: number }>(`select id from cases where inventory_id = $1 and number = $2`, [invId, d.case]))[0].id;
+    const docBranch = d.branch
+      ? (await db.query<{ id: number }>(`select id from branches where slug = $1`, [d.branch]))[0]?.id ?? branch
+      : branch;
+    const i18n = { kk: d.title.kk ? "machine" : "none", en: d.title.en ? "machine" : "none" };
+    const rows = await db.query<{ id: number }>(
+      `insert into documents(uid, fund_id, case_id, branch_id, cipher, title, description, doc_type, date_text, year_from, year_to,
+                             date_uncertain, author, place, provenance, i18n_status, publish_status, status, is_demo, published_at)
+       values (md5('demo:' || $1::text)::uuid, $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'Демонстрационные данные',$15,$16,$17,true,
+               case when $17 = 'published' then now() end)
+       on conflict (uid) do nothing returning id`,
+      [d.key, fundId, caseId, docBranch, `${d.fund}, оп. ${d.inv}, д. ${d.case}`, d.title, d.description, d.doc_type, d.date_text,
+       d.year_from, d.year_to, d.date_uncertain ?? false, d.author ?? null, d.place ?? null, i18n, d.publish ?? "public", d.status ?? "published"],
+    );
+    if (!rows.length) continue;
+    added++;
+    for (let p = 1; p <= (d.pages ?? 0); p++) {
+      const key = `demo/${d.key}/p${p}.svg`;
+      const meta = await putFile(key, Buffer.from(demoImage(d, p, i + 1)));
+      const f = await db.query<{ id: number }>(
+        `insert into digital_files(kind, storage_key, original_name, mime, size_bytes, sha256, width, height, access, provenance, rights_note, is_demo)
+         values ('master',$1,$2,'image/svg+xml',$3,$4,1200,$5,$6,'Сгенерированное демо-изображение, не скан документа','Демо-данные проекта',true)
+         on conflict (storage_key) do update set sha256 = excluded.sha256 returning id`,
+        [key, `${d.key}-p${p}.svg`, meta.size, meta.sha256, d.doc_type === "photo" ? 860 : 1600, d.file_access ?? "public"],
+      );
+      await db.query(`insert into document_files(document_id, file_id, sort) values ($1,$2,$3) on conflict do nothing`, [rows[0].id, f[0].id, p]);
+    }
+  }
+  if (added) console.log(`  демо-документы: ${added}`);
 }
 
 (async () => {

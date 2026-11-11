@@ -23,8 +23,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
   const total = (await q<{ n: number }>(`select count(*)::int as n from branches where is_visible`))[0]?.n ?? 0;
 
   const tiles: [IconName, string, string][] = [
-    ["folder", d.tiles.funds, "catalog?type=funds"],
-    ["user", d.tiles.personal, "catalog?type=personal"],
+    ["folder", d.tiles.funds, "catalog?tab=funds"],
+    ["user", d.tiles.personal, "catalog?tab=funds&kind=personal"],
     ["book", d.tiles.metric, "catalog?doc_type=metric_book"],
     ["image", d.tiles.media, "catalog?doc_type=photo"],
     ["history", d.tiles.chronicle, "chronicle"],
