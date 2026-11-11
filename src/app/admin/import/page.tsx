@@ -33,8 +33,6 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
         <div className="acts-row">
           <button className="btn" type="submit">Загрузить и проверить</button>
           <a className="btn sec" href="/docs/import-sample.csv" download>Образец файла (CSV)</a>
-          {/* выгрузка — это скачивание файла, а не переход по странице */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           {can(u, "catalog.export") ? <a className="btn sec" href="/admin/export" download>Выгрузить открытые описания (CSV)</a> : null}
         </div>
       </form>
