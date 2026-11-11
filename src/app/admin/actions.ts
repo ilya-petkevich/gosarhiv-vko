@@ -235,7 +235,7 @@ export async function uploadImport(f: FormData) {
   }
   const job = (
     await q<{ id: number }>(
-      `insert into import_jobs(kind, filename, status, mapping, total_rows, created_by, fund_id, columns, rows) values ('documents',$1,'preview',$2,$3,$4,$5,$6,$7) returning id`,
+      `insert into import_jobs(kind, filename, status, mapping, total_rows, created_by, fund_id, columns, rows) values ('documents',$1,'preview',$2,$3,$4,$5,$6::text::jsonb,$7::text::jsonb) returning id`,
       [file.name.slice(0, 200), guessMapping(parsed.columns), parsed.rows.length, u.id, fund, JSON.stringify(parsed.columns), JSON.stringify(parsed.rows)],
     )
   )[0];
@@ -303,7 +303,7 @@ export async function runImport(f: FormData) {
     }
   }
   await q(
-    `update import_jobs set status = 'done', ok_rows = $2, failed_rows = $3, errors = $4, created_ids = $5, finished_at = now() where id = $1`,
+    `update import_jobs set status = 'done', ok_rows = $2, failed_rows = $3, errors = $4::text::jsonb, created_ids = $5, finished_at = now() where id = $1`,
     [id, created.length, errors.length, JSON.stringify(errors), created],
   );
   await audit(u, "import.run", "import", id, "ok", { created: created.length, failed: errors.length });

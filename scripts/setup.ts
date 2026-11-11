@@ -122,7 +122,7 @@ async function seedFunds() {
       await query(
         `insert into funds(branch_id, fund_number, kind, title, year_from, year_to, cases_count, publish_status, status,
                            names, names_text, units_text, first_received, ownership, fund_category, note, source)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,'published',$9,$10,$11,$12,$13,$14,$15,$16)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,'published',$9::text::jsonb,$10,$11,$12,$13,$14,$15,$16)
          on conflict (branch_id, fund_number) do nothing`,
         [
           branch, f.number, f.kind, { ru: f.title }, f.year_from, f.year_to, f.cases_count,
