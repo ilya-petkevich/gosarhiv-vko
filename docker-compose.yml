@@ -1,0 +1,31 @@
+# Полный локальный стенд: PostgreSQL + сайт.
+#   docker compose up --build
+# Сайт: http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gavko
+      POSTGRES_USER: gavko
+      POSTGRES_PASSWORD: gavko
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gavko -d gavko"]
+      interval: 3s
+      retries: 20
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gavko:gavko@db:5432/gavko
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo-gavko-2026}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:
