@@ -432,3 +432,6 @@ button.chip { cursor: pointer; font: inherit; font-size: 16px; }
 .st-archived, .st-draft { background: transparent; border: 1px solid var(--line); color: var(--muted); }
 .chip[aria-current] { border-color: var(--accent); color: var(--accent); }
 .rework { flex: 1 1 100%; }
+.viewer .stage.pdf { background: #fff; }
+.viewer .stage.pdf iframe { width: 100%; height: 100%; border: 0; }
+.pdf-thumb { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; font-weight: 700; color: var(--accent); }

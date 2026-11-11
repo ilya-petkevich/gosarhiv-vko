@@ -160,7 +160,7 @@ export async function searchDocuments(f: Filters) {
     const rows = await q<DocHit>(
       `select d.uid, d.title, d.cipher, d.doc_type, d.date_text, d.date_uncertain, d.place, d.is_demo, f.fund_number,
               b.short_name as branch,
-              (select df_file.id from document_files x join digital_files df_file on df_file.id = x.file_id
+              (select coalesce((select pv.id from digital_files pv where pv.master_id = df_file.id and pv.kind = 'preview' limit 1), df_file.id) from document_files x join digital_files df_file on df_file.id = x.file_id
                 where x.document_id = d.id and ${FILE_VISIBLE} order by x.sort limit 1) as preview_id,
               (select count(*)::int from document_files x where x.document_id = d.id) as files_total,
               exists (select 1 from document_files x join digital_files df_file on df_file.id = x.file_id
@@ -250,13 +250,15 @@ export async function getDocument(uid: string) {
   const doc = rows[0];
   if (!doc) return null;
   const files = await q<{ id: number; access: string; mime: string; width: number | null; height: number | null; sort: number }>(
-    `select df_file.id, df_file.access, df_file.mime, df_file.width, df_file.height, x.sort
-     from document_files x join digital_files df_file on df_file.id = x.file_id where x.document_id = $1 order by x.sort`,
+    `select coalesce(pv.id, m.id) as id, m.access, coalesce(pv.mime, m.mime) as mime, m.width, m.height, x.sort
+     from document_files x join digital_files m on m.id = x.file_id
+     left join digital_files pv on pv.master_id = m.id and pv.kind = 'preview'
+     where x.document_id = $1 order by x.sort`,
     [doc.id],
   );
   const related = await q<DocHit>(
     `select d.uid, d.title, d.cipher, d.doc_type, d.date_text, d.date_uncertain, d.place, d.is_demo, f.fund_number, null as branch,
-            (select df_file.id from document_files x join digital_files df_file on df_file.id = x.file_id
+            (select coalesce((select pv.id from digital_files pv where pv.master_id = df_file.id and pv.kind = 'preview' limit 1), df_file.id) from document_files x join digital_files df_file on df_file.id = x.file_id
               where x.document_id = d.id and ${FILE_VISIBLE} order by x.sort limit 1) as preview_id,
             0 as files_total, false as has_copy
      from documents d join funds f on f.id = d.fund_id
@@ -300,13 +302,17 @@ export async function getFund(id: number) {
 
 // Файл для отдачи: открыт сам файл, запись опубликована и открыта (доп. ТЗ 3.1, сценарий «закрытый файл не выдаётся»)
 export async function getPublicFile(id: number) {
+  // открыт мастер-файл и опубликована запись; если у мастера есть облегчённая копия, отдаётся только она,
+  // мастер-копия (например, TIFF) остаётся в архиве (ТЗ 7.7)
   const rows = await q<{ storage_key: string; mime: string; sha256: string }>(
     `select df_file.storage_key, df_file.mime, df_file.sha256
      from digital_files df_file
-     join document_files x on x.file_id = df_file.id
+     join digital_files m on m.id = coalesce(df_file.master_id, df_file.id)
+     join document_files x on x.file_id = m.id
      join documents d on d.id = x.document_id
      join funds f on f.id = d.fund_id
-     where df_file.id = $1 and ${FILE_VISIBLE} and ${DOC_VISIBLE} and ${FUND_VISIBLE}
+     where df_file.id = $1 and m.access = 'public' and ${DOC_VISIBLE} and ${FUND_VISIBLE}
+       and (df_file.master_id is not null or not exists (select 1 from digital_files pv where pv.master_id = df_file.id))
      limit 1`,
     [id],
   );

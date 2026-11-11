@@ -8,11 +8,12 @@ import { Icon } from "./Icon";
 
 type Labels = { sheet: string; zoom: string; unzoom: string; prev: string; next: string; openFull: string };
 
-export function Viewer({ files, alt, labels }: { files: number[]; alt: string; labels: Labels }) {
+export function Viewer({ files, alt, labels }: { files: { id: number; mime: string }[]; alt: string; labels: Labels }) {
   const [i, setI] = useState(0);
   const [zoom, setZoom] = useState(false);
   const n = files.length;
-  const src = `/api/files/${files[i]}`;
+  const src = `/api/files/${files[i].id}`;
+  const isPdf = files[i].mime === "application/pdf";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -27,16 +28,22 @@ export function Viewer({ files, alt, labels }: { files: number[]; alt: string; l
 
   return (
     <div className="card viewer">
-      <div className={`stage${zoom ? " z" : ""}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={`${alt}. ${labels.sheet.replace("{i}", String(i + 1)).replace("{n}", String(n))}`} onClick={() => setZoom((z) => !z)} />
+      <div className={`stage${zoom ? " z" : ""}${isPdf ? " pdf" : ""}`}>
+        {isPdf ? (
+          <iframe src={src} title={`${alt}. ${labels.sheet.replace("{i}", String(i + 1)).replace("{n}", String(n))}`} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={`${alt}. ${labels.sheet.replace("{i}", String(i + 1)).replace("{n}", String(n))}`} onClick={() => setZoom((z) => !z)} />
+        )}
       </div>
       {n > 1 ? (
         <div className="thumbs" role="tablist">
-          {files.map((id, k) => (
+          {files.map(({ id, mime }, k) => (
             <button key={id} type="button" role="tab" aria-selected={k === i} aria-current={k === i} aria-label={labels.sheet.replace("{i}", String(k + 1)).replace("{n}", String(n))} onClick={() => setI(k)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/api/files/${id}`} alt="" loading="lazy" />
+              {mime === "application/pdf" ? <span className="pdf-thumb">PDF</span> : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/api/files/${id}`} alt="" loading="lazy" />
+              )}
             </button>
           ))}
         </div>
@@ -50,7 +57,7 @@ export function Viewer({ files, alt, labels }: { files: number[]; alt: string; l
               <button className="btn sec sm" type="button" onClick={() => setI(Math.min(n - 1, i + 1))} disabled={i === n - 1}>{labels.next} <Icon name="right" size={18} /></button>
             </>
           ) : null}
-          <button className="btn sec sm" type="button" aria-pressed={zoom} onClick={() => setZoom(!zoom)}><Icon name="zoom" size={18} /> {zoom ? labels.unzoom : labels.zoom}</button>
+          {isPdf ? null : <button className="btn sec sm" type="button" aria-pressed={zoom} onClick={() => setZoom(!zoom)}><Icon name="zoom" size={18} /> {zoom ? labels.unzoom : labels.zoom}</button>}
           <a className="btn sec sm" href={src} target="_blank" rel="noopener">{labels.openFull}</a>
         </div>
       </div>

@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
     title,
     description: pick(r.doc.description, lang).text.slice(0, 160),
     alternates: { languages: { kk: `/kk/catalog/doc/${uid}`, ru: `/ru/catalog/doc/${uid}`, en: `/en/catalog/doc/${uid}` } },
-    openGraph: { title, type: "article", images: r.openFiles[0] ? [`/api/files/${r.openFiles[0].id}`] : undefined },
+    openGraph: { title, type: "article", images: r.openFiles[0] && r.openFiles[0].mime.startsWith("image/") ? [`/api/files/${r.openFiles[0].id}`] : undefined },
     // демо-записи не должны попадать в поисковики как настоящие архивные документы
     robots: r.doc.is_demo ? { index: false, follow: true } : undefined,
   };
@@ -82,7 +82,7 @@ export default async function DocPage({ params }: P) {
         <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
           {openFiles.length ? (
             <Viewer
-              files={openFiles.map((f) => f.id)}
+              files={openFiles.map((f) => ({ id: f.id, mime: f.mime }))}
               alt={title.text}
               labels={{
                 sheet: t.sheet("{i}" as unknown as number, "{n}" as unknown as number),

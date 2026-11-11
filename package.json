@@ -16,9 +16,12 @@
     "bcryptjs": "^3.0.3",
     "leaflet": "^1.9.4",
     "next": "15.5.29",
+    "papaparse": "^5.7.0",
     "postgres": "^4.1.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "read-excel-file": "^9.3.14",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -26,12 +29,14 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "write-excel-file": "^4.1.1"
   },
   "engines": {
     "node": ">=20.10"

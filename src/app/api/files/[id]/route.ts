@@ -20,8 +20,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       // доступ может закрыться в любой момент — кэшируем ненадолго
       "Cache-Control": "public, max-age=300",
       "X-Content-Type-Options": "nosniff",
-      // SVG и PDF открываются изолированно, без выполнения скриптов
-      "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+      // SVG открывается изолированно, без выполнения скриптов; PDF показывает встроенный просмотрщик браузера
+      ...(meta.mime === "image/svg+xml" ? { "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox" } : {}),
+      "Content-Disposition": "inline",
       "X-Robots-Tag": "noindex",
     },
   });

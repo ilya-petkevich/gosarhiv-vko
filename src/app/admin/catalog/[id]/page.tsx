@@ -4,7 +4,8 @@ import { currentStaff, can } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { DocFields } from "@/components/DocForm";
 import { STATUS_LABEL, PUBLISH_LABEL, allowedTransitions, type Transition } from "@/lib/workflow";
-import { saveDocument, setFileAccess, transitionAction } from "../../actions";
+import { saveDocument, setFileAccess, transitionAction, uploadFiles } from "../../actions";
+import { MAX_FILE_MB } from "@/lib/files";
 
 export const metadata = { title: "Запись каталога" };
 
@@ -21,13 +22,13 @@ const MSG: Record<string, string> = {
   approve: "Одобрено.", publish: "Опубликовано — запись видна на сайте.", unpublish: "Снято с публикации.", archive: "Перенесено в архив.",
 };
 
-export default async function EditDoc({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ e?: string; m?: string }> }) {
+export default async function EditDoc({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ e?: string; m?: string; info?: string }> }) {
   const u = await currentStaff();
   if (!u) redirect("/admin/login");
   if (!can(u, "catalog.edit", "content.create", "content.edit", "content.review", "content.publish")) redirect("/admin");
   const { id } = await params;
   if (!/^\d{1,9}$/.test(id)) notFound();
-  const { e, m } = await searchParams;
+  const { e, m, info } = await searchParams;
   const doc = (
     await q<{
       id: number; uid: string; title: { ru: string; kk?: string; en?: string }; description: { ru?: string } | null; cipher: string | null; date_text: string | null;
@@ -40,8 +41,10 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
     )
   )[0];
   if (!doc) notFound();
-  const files = await q<{ id: number; access: string; original_name: string | null }>(
-    `select df.id, df.access, df.original_name from document_files x join digital_files df on df.id = x.file_id where x.document_id = $1 order by x.sort`,
+  const files = await q<{ id: number; access: string; original_name: string | null; mime: string; size_bytes: number; sha256: string; preview: boolean }>(
+    `select df.id, df.access, df.original_name, df.mime, df.size_bytes, df.sha256,
+            exists (select 1 from digital_files p where p.master_id = df.id) as preview
+     from document_files x join digital_files df on df.id = x.file_id where x.document_id = $1 order by x.sort`,
     [doc.id],
   );
   const history = await q<{ from_status: string | null; to_status: string; comment: string | null; at: string; who: string | null }>(
@@ -64,6 +67,7 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
         {doc.status === "published" ? <> · <a href={`/ru/catalog/doc/${doc.uid}`} target="_blank" rel="noopener">на сайте ↗</a></> : null}</p>
       {m && MSG[m] ? <p className="notice ok" role="status">{MSG[m]}</p> : null}
       {e ? <p className="notice" role="alert">{e}</p> : null}
+      {info ? <p className="notice ok" role="status">{info}</p> : null}
 
       {trans.length || publishBlocked ? (
         <section className="card adm-card">
@@ -96,14 +100,23 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
         ) : <p className="small muted">Просмотр: у вашей роли нет права менять описание.</p>}
       </form>
 
-      {files.length ? (
-        <section className="card adm-card">
+      <section className="card adm-card">
           <h2 className="h3">Цифровые копии</h2>
+          {can(u, "files.upload") ? (
+            <form action={uploadFiles} className="adm-form upload">
+              <input type="hidden" name="doc_id" value={doc.id} />
+              <label className="fld"><span className="label">Добавить файлы (JPEG, PNG, WebP, TIFF, PDF; до {MAX_FILE_MB} МБ каждый, до 20 за раз)</span>
+                <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp,image/tiff,application/pdf" />
+              </label>
+              <div><button className="btn sec" type="submit">Загрузить</button></div>
+              <p className="small muted">Новые файлы закрыты, пока вы не откроете доступ. Мастер-копия хранится без изменений; для изображений на сайте показывается облегчённая копия.</p>
+            </form>
+          ) : null}
           <p className="small muted">Доступ к файлу задаётся отдельно от описания. «Требует проверки» и «Не публиковать» — файл на сайте не выдаётся.</p>
-          <ul className="adm-list">
+          {files.length ? <ul className="adm-list">
             {files.map((f) => (
               <li key={f.id} className="row-between">
-                <span>{f.original_name ?? `Файл ${f.id}`}</span>
+                <span>{f.original_name ?? `Файл ${f.id}`} <span className="small muted">· {f.mime.replace("image/", "").replace("application/", "").toUpperCase()} · {(f.size_bytes / 1024 / 1024).toFixed(2)} МБ{f.preview ? " · есть облегчённая копия" : ""} · SHA-256 {f.sha256.slice(0, 12)}…</span></span>
                 {can(u, "files.upload", "catalog.edit") ? (
                   <form action={setFileAccess} className="acts-row">
                     <input type="hidden" name="file_id" value={f.id} /><input type="hidden" name="doc_id" value={doc.id} />
@@ -113,9 +126,8 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
                 ) : <span className="small">{PUBLISH_LABEL[f.access]}</span>}
               </li>
             ))}
-          </ul>
+          </ul> : <p className="small muted">Файлов пока нет.</p>}
         </section>
-      ) : null}
 
       {history.length ? (
         <section className="card adm-card">

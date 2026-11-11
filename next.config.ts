@@ -3,8 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   // встроенный PostgreSQL (PGlite) грузит wasm с диска — не собирать его в бандл
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "sharp"],
   poweredByHeader: false,
+  // загрузка сканов в админке: до 25 МБ на файл, несколько файлов за раз
+  experimental: { serverActions: { bodySizeLimit: "100mb" } },
   async headers() {
     return [
       {

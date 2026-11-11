@@ -191,3 +191,138 @@ export async function saveBranch(f: FormData) {
   await audit(u, "branch.update", "branch", id, "ok", { before });
   redirect(`/admin/branches/${id}?m=saved`);
 }
+
+// ---------- Цифровые копии: пакетная загрузка ----------
+
+export async function uploadFiles(f: FormData) {
+  const u = await need();
+  const docId = Number(s(f, "doc_id", 12));
+  if (!can(u, "files.upload")) {
+    await audit(u, "file.upload", "document", docId, "denied");
+    redirect(`/admin/catalog/${docId}?e=${encodeURIComponent("Недостаточно прав для загрузки файлов")}`);
+  }
+  if (!(await q(`select 1 from documents where id = $1`, [docId])).length) redirect("/admin/catalog");
+  const files = f.getAll("files").filter((x): x is File => x instanceof File && x.size > 0).slice(0, 20);
+  if (!files.length) redirect(`/admin/catalog/${docId}?e=${encodeURIComponent("Выберите файлы")}`);
+  const { saveUpload } = await import("@/lib/files");
+  const base = (await q<{ n: number }>(`select coalesce(max(sort), 0)::int as n from document_files where document_id = $1`, [docId]))[0].n;
+  const results = [];
+  for (const [i, file] of files.entries()) results.push(await saveUpload(docId, file, u.id, base + i + 1));
+  const ok = results.filter((r) => r.ok).length;
+  const bad = results.filter((r): r is { name: string; ok: false; error: string } => !r.ok);
+  await audit(u, "file.upload", "document", docId, bad.length && !ok ? "error" : "ok", { uploaded: ok, rejected: bad.map((b) => `${b.name}: ${b.error}`) });
+  const msg = `Загружено: ${ok}.` + (bad.length ? ` Не принято: ${bad.map((b) => `${b.name} — ${b.error}`).join("; ")}` : "");
+  redirect(`/admin/catalog/${docId}?${bad.length ? "e" : "info"}=${encodeURIComponent(msg)}`);
+}
+
+// ---------- Импорт CSV / XLSX ----------
+
+export async function uploadImport(f: FormData) {
+  const u = await need();
+  if (!can(u, "catalog.import")) {
+    await audit(u, "import.upload", "import", null, "denied");
+    redirect("/admin?e=denied");
+  }
+  const file = f.get("file");
+  const fund = Number(s(f, "fund_id", 12));
+  if (!(file instanceof File) || !file.size) redirect(`/admin/import?e=${encodeURIComponent("Выберите файл")}`);
+  if (!(await q(`select 1 from funds where id = $1`, [fund])).length) redirect(`/admin/import?e=${encodeURIComponent("Выберите фонд")}`);
+  const { parseFile, guessMapping } = await import("@/lib/importer");
+  const parsed = await parseFile(file.name, Buffer.from(await file.arrayBuffer()));
+  if ("error" in parsed) {
+    await audit(u, "import.upload", "import", null, "error", { file: file.name.slice(0, 120), error: parsed.error });
+    redirect(`/admin/import?e=${encodeURIComponent(parsed.error)}`);
+  }
+  const job = (
+    await q<{ id: number }>(
+      `insert into import_jobs(kind, filename, status, mapping, total_rows, created_by, fund_id, columns, rows) values ('documents',$1,'preview',$2,$3,$4,$5,$6,$7) returning id`,
+      [file.name.slice(0, 200), guessMapping(parsed.columns), parsed.rows.length, u.id, fund, JSON.stringify(parsed.columns), JSON.stringify(parsed.rows)],
+    )
+  )[0];
+  await audit(u, "import.upload", "import", job.id, "ok", { file: file.name.slice(0, 120), rows: parsed.rows.length });
+  redirect(`/admin/import/${job.id}`);
+}
+
+async function ownJob(u: Staff, id: number) {
+  if (!can(u, "catalog.import")) redirect("/admin");
+  const job = (await q<{ id: number; status: string; rows: string[][]; mapping: Record<string, number>; fund_id: number; filename: string; created_ids: number[] }>(
+    `select id, status, rows, mapping, fund_id, filename, created_ids from import_jobs where id = $1`, [id],
+  ))[0];
+  if (!job) redirect("/admin/import");
+  return job;
+}
+
+export async function saveMapping(f: FormData) {
+  const u = await need();
+  const id = Number(s(f, "id", 12));
+  const job = await ownJob(u, id);
+  if (job.status !== "preview") redirect(`/admin/import/${id}`);
+  const { FIELDS } = await import("@/lib/importer");
+  const m: Record<string, number> = {};
+  for (const fl of FIELDS) {
+    const v = s(f, `map_${fl.key}`, 6);
+    if (v !== "" && /^\d+$/.test(v)) m[fl.key] = Number(v);
+  }
+  await q(`update import_jobs set mapping = $2 where id = $1`, [id, m]);
+  redirect(`/admin/import/${id}`);
+}
+
+export async function runImport(f: FormData) {
+  const u = await need();
+  const id = Number(s(f, "id", 12));
+  const job = await ownJob(u, id);
+  if (job.status !== "preview") redirect(`/admin/import/${id}`);
+  const { checkRows, toDocType } = await import("@/lib/importer");
+  await q(`update import_jobs set status = 'running' where id = $1`, [id]);
+  const checks = await checkRows(job.rows, job.mapping);
+  const created: number[] = [];
+  const errors: { row: number; error: string }[] = [];
+  for (const c of checks) {
+    if (c.errors.length) {
+      errors.push({ row: c.n, error: c.errors.join("; ") });
+      continue;
+    }
+    const v = c.values;
+    try {
+      // каждая строка сохраняется отдельно: сбой одной не откатывает остальные
+      const yf = Number(v.year_from!.slice(0, 4));
+      const row = (await q<{ id: number }>(
+        `insert into documents(fund_id, branch_id, cipher, title, description, doc_type, date_text, year_from, year_to, place,
+                               publish_status, status, created_by, updated_by, provenance, import_job_id)
+         values ($1,(select branch_id from funds where id = $1),$2,$3,$4,$5,$6,$7,$8,$9,'needs_check','draft',$10,$10,$11,$12) returning id`,
+        [
+          job.fund_id, v.cipher, { ru: v.title_ru, ...(v.title_kk ? { kk: v.title_kk } : {}), ...(v.title_en ? { en: v.title_en } : {}) },
+          v.desc_ru ? { ru: v.desc_ru } : null, toDocType(v.doc_type), v.date_text, yf, v.year_to ? Number(v.year_to.slice(0, 4)) : yf, v.place || null,
+          u.id, `Импорт из файла «${job.filename}», строка ${c.n}`, id,
+        ],
+      ))[0];
+      created.push(row.id);
+    } catch (e) {
+      errors.push({ row: c.n, error: "ошибка сохранения" });
+      console.error("import row", c.n, String(e).slice(0, 200));
+    }
+  }
+  await q(
+    `update import_jobs set status = 'done', ok_rows = $2, failed_rows = $3, errors = $4, created_ids = $5, finished_at = now() where id = $1`,
+    [id, created.length, errors.length, JSON.stringify(errors), created],
+  );
+  await audit(u, "import.run", "import", id, "ok", { created: created.length, failed: errors.length });
+  redirect(`/admin/import/${id}`);
+}
+
+export async function rollbackImport(f: FormData) {
+  const u = await need();
+  const id = Number(s(f, "id", 12));
+  const job = await ownJob(u, id);
+  if (job.status !== "done") redirect(`/admin/import/${id}`);
+  // удаляются только записи этого импорта, которые остались черновиками и без файлов
+  const del = await q<{ id: number }>(
+    `delete from documents d where d.import_job_id = $1 and d.status = 'draft'
+       and not exists (select 1 from document_files x where x.document_id = d.id) returning d.id`,
+    [id],
+  );
+  const kept = job.created_ids.length - del.length;
+  await q(`update import_jobs set status = 'rolled_back' where id = $1`, [id]);
+  await audit(u, "import.rollback", "import", id, "ok", { deleted: del.length, kept });
+  redirect(`/admin/import/${id}?info=${encodeURIComponent(`Удалено записей: ${del.length}.` + (kept ? ` Оставлено ${kept}: они уже изменены или ушли на согласование.` : ""))}`);
+}
