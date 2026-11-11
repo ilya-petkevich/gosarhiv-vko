@@ -46,6 +46,11 @@ async function makePostgres(url: string): Promise<Db> {
     // шифрование, если сервер его поддерживает (Supabase — да, локальный Docker — нет); DB_SSL=require — строго
     ssl: (process.env.DB_SSL as "require" | "prefer" | undefined) ?? (/@(localhost|127\.0\.0\.1|db)[:/]/.test(url) ? false : "prefer"),
     onnotice: () => {},
+    // бессерверная среда: не держать простаивающие соединения (пулер может их оборвать) и не ждать вечно
+    idle_timeout: Number(process.env.DB_IDLE_TIMEOUT || 20),
+    max_lifetime: 60 * 5,
+    connect_timeout: 10,
+    connection: { statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS || 15000) },
   });
   return {
     kind: "postgres",
