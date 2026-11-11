@@ -63,6 +63,7 @@ export function BranchesMap({ branches, t }: { branches: BranchView[]; t: Branch
         let tileErrors = 0;
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 18,
+          detectRetina: true, // чёткие плитки на экранах высокой плотности
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         })
           .on("tileerror", () => {
@@ -72,7 +73,8 @@ export function BranchesMap({ branches, t }: { branches: BranchView[]; t: Branch
         const pts: [number, number][] = [];
         for (const b of branches) {
           if (b.lat == null || b.lng == null) continue;
-          const icon = L.divIcon({ className: `pin${b.isMain ? " main" : ""}`, html: "<span></span>", iconSize: [26, 26], iconAnchor: [13, 13] });
+          // область касания 40×40 (WCAG 2.2, размер цели), сама точка — 22 px
+          const icon = L.divIcon({ className: `pin${b.isMain ? " main" : ""}`, html: "<span></span>", iconSize: [40, 40], iconAnchor: [20, 20] });
           const mk = L.marker([b.lat, b.lng], { icon, title: b.short, keyboard: true, alt: b.name })
             .addTo(m)
             .on("click", () => setSelected(b.slug));

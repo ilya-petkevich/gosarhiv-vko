@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // встроенный PostgreSQL (PGlite) грузит wasm с диска — не собирать его в бандл
   serverExternalPackages: ["@electric-sql/pglite", "sharp"],
   poweredByHeader: false,
+  // метаданные (title, description, Open Graph) — сразу в <head> для всех, а не потоком в конце страницы
+  htmlLimitedBots: /.*/,
   // загрузка сканов в админке: до 25 МБ на файл, несколько файлов за раз
   experimental: { serverActions: { bodySizeLimit: "100mb" } },
   async headers() {

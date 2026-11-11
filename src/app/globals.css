@@ -374,9 +374,10 @@ button.chip { cursor: pointer; font: inherit; font-size: 16px; }
 .map { height: 520px; width: 100%; background: var(--ochre-soft); }
 @media (max-width: 640px) { .map { height: 340px; } }
 .map-fail { position: absolute; inset: auto 12px 12px 12px; background: var(--surface); padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); z-index: 500; }
+.pin { display: flex; align-items: center; justify-content: center; }
 .pin span { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .pin.main span { background: #1F1A16; }
-.pin.on span { width: 26px; height: 26px; background: var(--ochre); margin: -2px; }
+.pin.on span { width: 28px; height: 28px; background: var(--ochre); }
 .leaflet-container { font-family: var(--font-onest), sans-serif; font-size: 15px; }
 .br-cur { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
 .from-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -521,3 +522,4 @@ button.chip { cursor: pointer; font: inherit; font-size: 16px; }
 .dates-card { padding: 8px 24px 20px; display: flex; flex-direction: column; }
 .date-row { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 17px; }
 .dates-card .more { margin-top: 16px; }
+.leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 44px !important; font-size: 22px !important; }
