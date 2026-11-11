@@ -1,38 +1,39 @@
 /* Госархив ВКО — токены и базовые стили. Значения из макета Figma (ZkP3HwiLmFDsGBI6QGrPbT). */
 
-/* Палитра A (11.11.2026): белый фон, бордо — фирменный, бирюза — контрастный для действий. */
+/* Палитра: тёплая архивная (бордо, бумага, охра). Варианты A/B/C на белом фоне — в Figma, выбор за заказчиком.
+   --brand — фирменный цвет, --accent — цвет действий; в этой палитре совпадают. */
 :root {
-  --bg: #FFFFFF;
-  --alt: #F7F5F2;
+  --bg: #F6F2EB;
+  --alt: #EFE9DF;
   --surface: #FFFFFF;
-  --ink: #1C1A19;
-  --muted: #5F5A55;
-  --line: #E7E2DC;
-  --accent: #0F6E73;
+  --ink: #1F1A16;
+  --muted: #5E544A;
+  --line: #E2D9CB;
+  --accent: #8A2E1F;
   --accent-ink: #FFFFFF;
-  --accent-soft: #E3F1F1;
-  --brand: #7A1F2B;
+  --accent-soft: #F6E7E2;
+  --brand: #8A2E1F;
   --brand-ink: #FFFFFF;
-  --brand-soft: #F7E9EB;
-  --band: #7A1F2B;
+  --brand-soft: #F6E7E2;
+  --band: #7A2A1C;
   --ochre: #8A5C12;
-  --ochre-soft: #F6EEDF;
+  --ochre-soft: #F7EEDC;
   --green: #2F6B3C;
   --green-soft: #E5F1E6;
-  --top: #1C1A19;
-  --top-ink: #E9E4DE;
+  --top: #2A1E17;
+  --top-ink: #EDE3D3;
   --focus: #1F5FBF;
-  --shadow: 0 1px 2px rgba(28,26,25,.05), 0 6px 20px rgba(28,26,25,.06);
+  --shadow: 0 1px 2px rgba(31,26,22,.05), 0 6px 20px rgba(31,26,22,.07);
   --ease: cubic-bezier(.2,.7,.2,1);
   color-scheme: light;
 }
 
-/* тёмная тема: нейтральный графит вместо коричневого, светлый текст, контраст не ниже 7:1 для основного текста */
+/* тёмная тема: нейтральный графит, светлый текст (основной текст — контраст выше 7:1), тёплые акценты */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #131517; --alt: #1A1D20; --surface: #1C1F22; --ink: #ECEDEE; --muted: #AEB4BA; --line: #30353A;
-    --accent: #5FC2C7; --accent-ink: #0B1718; --accent-soft: #163233;
-    --brand: #E8939E; --brand-ink: #1E0D10; --brand-soft: #3A1D22; --band: #4A1820;
+    --accent: #E9A08A; --accent-ink: #1E110D; --accent-soft: #3A2520;
+    --brand: #E9A08A; --brand-ink: #1E110D; --brand-soft: #3A2520; --band: #4A1D16;
     --ochre: #E2B35F; --ochre-soft: #2E2717; --green: #8CCB97; --green-soft: #1A2E20;
     --top: #0E1012; --top-ink: #C9CDD1; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.4);
     color-scheme: dark;
@@ -40,8 +41,8 @@
 }
 :root[data-theme="dark"] {
   --bg: #131517; --alt: #1A1D20; --surface: #1C1F22; --ink: #ECEDEE; --muted: #AEB4BA; --line: #30353A;
-  --accent: #5FC2C7; --accent-ink: #0B1718; --accent-soft: #163233;
-  --brand: #E8939E; --brand-ink: #1E0D10; --brand-soft: #3A1D22; --band: #4A1820;
+  --accent: #E9A08A; --accent-ink: #1E110D; --accent-soft: #3A2520;
+  --brand: #E9A08A; --brand-ink: #1E110D; --brand-soft: #3A2520; --band: #4A1D16;
   --ochre: #E2B35F; --ochre-soft: #2E2717; --green: #8CCB97; --green-soft: #1A2E20;
   --top: #0E1012; --top-ink: #C9CDD1; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.4);
   color-scheme: dark;
@@ -195,7 +196,7 @@ h3 { font-size: 19px; line-height: 1.3; font-weight: 600; }
 .more .ico { transition: transform .2s var(--ease); }
 .more:hover .ico { transform: translateX(4px); }
 
-.cert { display: flex; gap: 24px; align-items: center; padding: 24px 28px; background: var(--alt); }
+.cert { display: flex; gap: 24px; align-items: center; padding: 24px 28px; background: var(--ochre-soft); border-color: var(--ochre-soft); }
 .cert .txt { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .cert .acts { display: flex; flex-direction: column; gap: 10px; }
 @media (max-width: 900px) { .cert { flex-direction: column; align-items: stretch; padding: 24px; } }
@@ -295,7 +296,7 @@ h3 { font-size: 19px; line-height: 1.3; font-weight: 600; }
 .doc-info { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .doc-info h1 { font-size: 30px; }
 @media (max-width: 640px) { .doc-info h1 { font-size: 24px; } }
-.cipher-box { display: flex; gap: 14px; align-items: center; padding: 12px 16px; background: var(--alt); flex-wrap: wrap; }
+.cipher-box { display: flex; gap: 14px; align-items: center; padding: 12px 16px; background: var(--ochre-soft); border-color: var(--ochre-soft); flex-wrap: wrap; }
 .cipher-box .v { font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
 .meta { padding: 4px 24px 12px; }
 .meta div { display: flex; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line); }
@@ -379,7 +380,7 @@ button.chip { cursor: pointer; font: inherit; font-size: 14px; }
 .price-wrap { overflow-x: auto; max-width: 1100px; }
 .price { width: 100%; border-collapse: collapse; font-size: 15px; }
 .price th, .price td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-.price th { background: var(--alt); font-weight: 600; }
+.price th { background: var(--ochre-soft); font-weight: 600; }
 .price .num { text-align: right; white-space: nowrap; font-weight: 600; }
 @media (max-width: 640px) { .price { font-size: 15px; } .price th:first-child, .price td:first-child { display: none; } }
 
