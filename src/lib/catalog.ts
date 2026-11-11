@@ -71,7 +71,7 @@ export function parseQuery(raw: string): Parsed {
 // Запрос: каждое слово ищется по русской морфологии и как есть (для казахского и английского),
 // с вариантами написания через OR; слова соединяются через AND.
 // Возвращает SQL-выражение tsquery, значения уходят параметрами.
-function tsqExpr(text: string, add: (v: unknown) => string): string | null {
+function tsqExpr(text: string, add: (v: unknown) => string, anyWord = false): string | null {
   const words = text
     .toLowerCase()
     .split(/\s+/)
@@ -87,7 +87,7 @@ function tsqExpr(text: string, add: (v: unknown) => string): string | null {
       return `plainto_tsquery('russian', ${p}) || plainto_tsquery('simple', ${p})`;
     }).join(" || ") + ")";
   });
-  return "(" + parts.join(" && ") + ")";
+  return "(" + parts.join(anyWord ? " || " : " && ") + ")";
 }
 
 export type Filters = {
@@ -98,6 +98,8 @@ export type Filters = {
   fund?: string;
   branch?: string;
   copy?: boolean;
+  // достаточно совпадения любого из слов (для помощника, когда по всем словам почти ничего нет)
+  anyWord?: boolean;
   sort?: "relevance" | "old" | "new";
   page?: number;
 };
@@ -116,7 +118,7 @@ function buildDocWhere(f: Filters, p: Parsed, params: unknown[], useText: boolea
   };
   let tsq: string | null = null;
   if (useText && p.text) {
-    tsq = tsqExpr(p.text, add);
+    tsq = tsqExpr(p.text, add, f.anyWord);
     if (tsq) where.push(`d.search_vector @@ ${tsq}`);
   }
   const from = f.from ?? p.decadeFrom;

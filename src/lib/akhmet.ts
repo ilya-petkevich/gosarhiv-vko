@@ -90,15 +90,29 @@ export function keywords(text: string) {
     .join(" ");
 }
 
-type Found = { docs: DocHit[]; funds: FundHit[]; docsTotal: number; fundsTotal: number; fuzzy: boolean };
+type Found = { docs: DocHit[]; funds: FundHit[]; docsTotal: number; fundsTotal: number; fuzzy: boolean; partial: boolean };
 
 async function find(query: string, opts: { docType?: string; from?: number; to?: number } = {}): Promise<Found> {
   const kw = keywords(query);
-  const d = await searchDocuments({ q: kw, docType: opts.docType, from: opts.from, to: opts.to });
+  const base = { docType: opts.docType, from: opts.from, to: opts.to };
+  const d = await searchDocuments({ q: kw, ...base });
   const f = await searchFunds({ q: kw, from: opts.from, to: opts.to });
   // «похожие по написанию» помощнику не годятся: он не должен выдавать случайные записи за ответ
-  if (d.fuzzy) return { docs: [], funds: f.rows.slice(0, 5), docsTotal: 0, fundsTotal: f.total, fuzzy: false };
-  return { docs: d.rows.slice(0, 8), funds: f.rows.slice(0, 5), docsTotal: d.total, fundsTotal: f.total, fuzzy: false };
+  let docs = d.fuzzy ? [] : d.rows;
+  let total = d.fuzzy ? 0 : d.total;
+  let partial = false;
+  // по всем словам почти ничего — добавляем записи, где совпала часть слов (с пометкой для модели)
+  if (total < 3 && kw.split(/\s+/).length > 1) {
+    const any = await searchDocuments({ q: kw, ...base, anyWord: true });
+    const seen = new Set(docs.map((x) => x.uid));
+    const extra = any.fuzzy ? [] : any.rows.filter((x) => !seen.has(x.uid));
+    if (extra.length) {
+      docs = [...docs, ...extra];
+      total += extra.length;
+      partial = true;
+    }
+  }
+  return { docs: docs.slice(0, 8), funds: f.rows.slice(0, 5), docsTotal: total, fundsTotal: f.total, fuzzy: false, partial };
 }
 
 function docSource(d: DocHit, lang: Lang): Source {
@@ -271,7 +285,7 @@ const TOOL: Anthropic.Beta.BetaTool = {
   input_schema: {
     type: "object",
     properties: {
-      query: { type: "string", description: "Ключевые слова по-русски: тема, место, организация, номер фонда. Без служебных слов." },
+      query: { type: "string", description: "1–3 ключевых слова по-русски: тема, место, организация или номер фонда. Без служебных слов и без слов «фото», «документы», «годы», «город»: вид материала передавай в doc_type, период — в year_from/year_to." },
       doc_type: { type: "string", enum: ["photo", "document", "map", "newspaper", "metric_book", "audio", "video"], description: "Вид материала, если он важен" },
       year_from: { type: "integer" },
       year_to: { type: "integer" },
@@ -331,7 +345,12 @@ async function modelAnswer(question: string, lang: Lang): Promise<Answer> {
         return { ref, fund_number: f.fund_number, title: pick(f.title, "ru").text, years: f.year_from ? `${f.year_from}–${f.year_to ?? ""}` : null, units: f.units_text, personal: f.kind === "personal", demo: f.is_demo };
       }),
     ];
-    return { documents_total: r.docsTotal, funds_total: r.fundsTotal, similar_spelling_only: r.fuzzy, results: items };
+    return {
+      documents_total: r.docsTotal,
+      funds_total: r.fundsTotal,
+      ...(r.partial ? { note: "По всем словам запроса записей мало; добавлены записи, где совпала только часть слов. Проверь, подходят ли они к вопросу, и не выдавай неподходящие за ответ." } : {}),
+      results: items,
+    };
   };
 
   type SearchInput = { query: string; doc_type?: string; year_from?: number; year_to?: number };
