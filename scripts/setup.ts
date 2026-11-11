@@ -10,6 +10,7 @@ import { ROLES, PERMISSIONS, ROLE_PERMISSIONS, DEMO_USERS } from "../db/seed/rol
 import { BRANCHES, APPROX_COORDS } from "../db/seed/branches";
 import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
 import { DEMO_EXHIBITIONS, DEMO_COLLECTIONS } from "../db/seed/showcase";
+import { EXTRA_PAGES, NEWS_CATEGORIES, DEMO_NEWS } from "../db/seed/pages";
 import { putFile } from "../src/lib/storage";
 
 async function migrate() {
@@ -83,6 +84,7 @@ async function seed() {
   await seedDemoCatalog();
   await seedChronicle();
   await seedShowcase();
+  await seedPagesAndNews();
 
   await db.query(
     `insert into site_settings(key, value) values ('contacts', $1) on conflict (key) do nothing`,
@@ -197,11 +199,22 @@ async function seedDemoCatalog() {
 // Хронология из календарей памятных дат (scripts/convert/calendar_from_docx.py)
 async function seedChronicle() {
   const db = await getDb();
-  if ((await db.query<{ n: number }>(`select count(*)::int n from historical_events`))[0].n > 0) return;
   const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "seed", "data", "chronicle-events.json"), "utf8")) as {
     themes: { key: string; label: string }[];
     events: { year: number; month: number | null; day: number | null; date_text: string; text: string; theme: string; sources: string[] }[];
   };
+  // календарь памятных дат: месяц, день и годы календарей (заполняется и для уже загруженных событий)
+  const fill = async () => {
+    for (const [i, e] of data.events.entries()) {
+      await db.query(`update historical_events set month = $2, day = $3, calendar_years = $4 where slug = $1 and month is null and day is null and calendar_years = '{}'`, [
+        `ev-${e.year}-${i}`, e.month, e.day, e.sources.map(Number),
+      ]);
+    }
+  };
+  if ((await db.query<{ n: number }>(`select count(*)::int n from historical_events`))[0].n > 0) {
+    await fill();
+    return;
+  }
   for (const [i, t] of data.themes.entries()) {
     await db.query(`insert into categories(kind, slug, name, sort) values ('chronicle',$1,$2,$3) on conflict (kind, slug) do nothing`, [t.key, { ru: t.label }, i]);
   }
@@ -215,6 +228,7 @@ async function seedChronicle() {
       );
     }
   });
+  await fill();
   console.log(`  события хронологии: ${data.events.length}`);
 }
 
@@ -263,6 +277,28 @@ async function seedShowcase() {
         ]);
       }
     }
+  }
+}
+
+async function seedPagesAndNews() {
+  const db = await getDb();
+  const fromDocs = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "seed", "data", "pages.json"), "utf8")) as typeof EXTRA_PAGES;
+  for (const [i, p] of [...fromDocs, ...EXTRA_PAGES].entries()) {
+    await db.query(
+      `insert into pages(slug, section, title, body, source, status, sort) values ($1,'about',$2,$3,$4,'published',$5) on conflict (slug) do nothing`,
+      [p.slug, { ru: p.title }, { ru: p.body }, p.source, i],
+    );
+  }
+  for (const [i, c] of NEWS_CATEGORIES.entries()) {
+    await db.query(`insert into categories(kind, slug, name, sort) values ('news',$1,$2,$3) on conflict (kind, slug) do nothing`, [c.slug, c.name, i]);
+  }
+  for (const n of DEMO_NEWS) {
+    await db.query(
+      `insert into news(slug, title, summary, body, category_id, status, is_demo, published_at, created_at)
+       values ($1,$2,$3,$4,(select id from categories where kind = 'news' and slug = $5),'published',true,$6::date + time '10:00',$6::date + time '10:00')
+       on conflict (slug) do nothing`,
+      [n.slug, n.title, n.summary, n.body, n.category, n.date],
+    );
   }
 }
 

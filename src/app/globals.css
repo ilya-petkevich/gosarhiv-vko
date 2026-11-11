@@ -492,3 +492,32 @@ button.chip { cursor: pointer; font: inherit; font-size: 16px; }
 @media (max-width: 640px) { .col-it { flex-direction: column; } .sc-cover.sm { width: 100%; height: 160px; } }
 .sc-adm-item { align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .sc-add { border-top: 2px solid var(--line); padding-top: 16px; margin-top: 8px; }
+
+/* ---------- об архиве, новости ---------- */
+.about-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 28px; }
+.about-card { display: flex; flex-direction: column; gap: 10px; padding: 24px; color: var(--ink); }
+.about-card:hover { text-decoration: none; border-color: var(--accent); }
+.about-card .ib { width: 56px; height: 56px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.about-card b { font-size: 20px; }
+.page-art { max-width: 860px; display: flex; flex-direction: column; gap: 16px; }
+.page-art .lead { font-size: 21px; }
+.md { display: flex; flex-direction: column; gap: 14px; font-size: 19px; line-height: 1.6; }
+.md h2 { margin-top: 16px; }
+.md ul { padding-left: 24px; display: flex; flex-direction: column; gap: 8px; }
+.page-src { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 12px; }
+.cal { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+@media (max-width: 640px) { .cal { grid-template-columns: 1fr; } }
+.cal-m { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.cal-m ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.cal-m li { display: flex; gap: 14px; font-size: 17px; }
+.cal-d { flex: none; width: 96px; font-weight: 700; color: var(--accent); }
+.news-list { display: flex; flex-direction: column; gap: 16px; max-width: 960px; }
+.news-card { padding: 22px 26px; display: flex; flex-direction: column; gap: 8px; }
+.news-card h2 a { color: var(--ink); }
+.home-two { display: grid; grid-template-columns: 1.6fr 1fr; gap: 32px; align-items: start; }
+@media (max-width: 1024px) { .home-two { grid-template-columns: 1fr; } }
+.news-card h3 { font-size: 20px; }
+.news-card h3 a { color: var(--ink); }
+.dates-card { padding: 8px 24px 20px; display: flex; flex-direction: column; }
+.date-row { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 17px; }
+.dates-card .more { margin-top: 16px; }

@@ -5,6 +5,10 @@ import { Icon, type IconName } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
+import { listExhibitions } from "@/lib/showcase";
+import { listNews, upcomingDates } from "@/lib/content";
+import { showcaseText } from "@/i18n/showcase";
+import { contentText } from "@/i18n/content";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +25,12 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     `select slug, name, address, phone, lat, lng, coords_verified from branches where is_visible order by sort limit 6`,
   );
   const total = (await q<{ n: number }>(`select count(*)::int as n from branches where is_visible`))[0]?.n ?? 0;
+  const [exhibitions, news, dates] = await Promise.all([listExhibitions(), listNews({ limit: 3 }), upcomingDates(4)]);
+  const st = showcaseText(lang);
+  const ct = contentText(lang);
+  const MONTHS = "января февраля марта апреля мая июня июля августа сентября октября ноября декабря".split(" ");
+  const MONTHS_NOM = "январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь".split(" ");
+  const nowYear = new Date().getFullYear();
 
   const tiles: [IconName, string, string][] = [
     ["folder", d.tiles.funds, "catalog?tab=funds"],
@@ -116,6 +126,70 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             </a>
           </div>
         </div>
+      </div>
+
+      {exhibitions.length ? (
+        <section className="wrap section" aria-labelledby="ex-title">
+          <div className="section-head">
+            <h2 id="ex-title">{st.exTitle}</h2>
+            <Link className="more" href={L("exhibitions")}>{st.allExhibitions} <Icon name="arrow" size={20} /></Link>
+          </div>
+          <div className="sc-grid" style={{ marginTop: 0 }}>
+            {exhibitions.slice(0, 3).map((e) => {
+              const title = pick(e.title, lang);
+              return (
+                <Link key={e.slug} href={L(`exhibitions/${e.slug}`)} className="card sc-card">
+                  <span className="sc-cover">
+                    {e.cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/files/${e.cover}`} alt="" loading="lazy" />
+                    ) : <Icon name="film" size={40} />}
+                  </span>
+                  <span className="sc-body">
+                    <span className="tags"><span className="tag red">{e.count} {st.exhibits}</span>{e.is_demo ? <span className="tag grey">{st.demo}</span> : null}</span>
+                    <b lang={title.fallback ? "ru" : undefined}>{title.text}</b>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="wrap section home-two">
+        <section aria-labelledby="news-title">
+          <div className="section-head">
+            <h2 id="news-title">{ct.news}</h2>
+            <Link className="more" href={L("news")}>{ct.allNews} <Icon name="arrow" size={20} /></Link>
+          </div>
+          <div className="news-list">
+            {news.rows.map((n) => {
+              const title = pick(n.title, lang);
+              return (
+                <article key={n.slug} className="card news-card">
+                  <div className="tags">
+                    <time className="small muted" dateTime={n.iso}>{n.date}</time>
+                    {n.category_name ? <span className="tag">{pick(n.category_name, lang).text}</span> : null}
+                    {n.is_demo ? <span className="tag grey">{ct.demo}</span> : null}
+                  </div>
+                  <h3><Link href={L(`news/${n.slug}`)} lang={title.fallback ? "ru" : undefined}>{title.text}</Link></h3>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+        <section aria-labelledby="dates-title">
+          <div className="section-head"><h2 id="dates-title">{ct.dates}</h2></div>
+          <div className="card dates-card" lang="ru">
+            {dates.map((r, i) => (
+              <div key={i} className="date-row">
+                <span className="cal-d">{r.day && r.month ? `${r.day} ${MONTHS[r.month - 1]}` : r.month ? MONTHS_NOM[r.month - 1] : ""}</span>
+                <span><b>{nowYear - r.year} {ct.years}</b> — {pick(r.title, lang).text}</span>
+              </div>
+            ))}
+            <Link className="more" href={L("about/calendar")}>{ct.calendar} {nowYear} <Icon name="arrow" size={20} /></Link>
+          </div>
+        </section>
       </div>
 
       <section className="wrap section" aria-labelledby="br-title">

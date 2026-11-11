@@ -479,3 +479,98 @@ export async function showcaseTransition(f: FormData) {
   const r = await transitionEntity(u, kind, id, s(f, "t", 20) as Transition, s(f, "comment", 1000));
   redirect(`/admin/showcase/${kind}/${id}?${r.ok ? `m=${s(f, "t", 20)}` : `e=${encodeURIComponent(r.error)}`}`);
 }
+
+// ---------- Новости ----------
+
+async function newsBranch(u: Staff, requested: number | null) {
+  // администратор филиала пишет новости только от своего филиала
+  if (can(u, "branches.edit_all") || !can(u, "branches.edit_own")) return requested;
+  return u.branch_id;
+}
+
+export async function saveNews(f: FormData) {
+  const u = await need();
+  if (!can(u, "news.edit")) {
+    await audit(u, "news.edit", "news", null, "denied");
+    redirect("/admin?e=denied");
+  }
+  const id = Number(s(f, "id", 12)) || null;
+  const title = s(f, "title_ru", 300);
+  const body = s(f, "body_ru", 20000);
+  const back = (e: string) => redirect(`/admin/news/${id ?? "new"}?e=${encodeURIComponent(e)}`);
+  if (!title) back("Заполните заголовок");
+  const cat = s(f, "category", 30);
+  const branchReq = Number(s(f, "branch_id", 6)) || null;
+  const branch = await newsBranch(u, branchReq);
+  const values = [
+    { ru: title, ...(s(f, "title_kk", 300) ? { kk: s(f, "title_kk", 300) } : {}), ...(s(f, "title_en", 300) ? { en: s(f, "title_en", 300) } : {}) },
+    s(f, "summary_ru", 600) ? { ru: s(f, "summary_ru", 600) } : null,
+    body ? { ru: body } : null,
+    cat || null,
+    branch,
+  ];
+  if (!id) {
+    const slug = `${slugify(title)}-${Date.now().toString(36).slice(-4)}`;
+    const row = (await q<{ id: number }>(
+      `insert into news(slug, title, summary, body, category_id, branch_id, status, created_by)
+       values ($1,$2,$3,$4,(select id from categories where kind = 'news' and slug = $5),$6,'draft',$7) returning id`,
+      [slug, ...values, u.id],
+    ))[0];
+    await audit(u, "news.create", "news", row.id, "ok");
+    redirect(`/admin/news/${row.id}?m=created`);
+  }
+  const cur = (await q<{ branch_id: number | null; status: string }>(`select branch_id, status from news where id = $1`, [id]))[0];
+  if (!cur) redirect("/admin/news");
+  if (can(u, "branches.edit_own") && !can(u, "branches.edit_all") && cur.branch_id !== u.branch_id) {
+    await audit(u, "news.update", "news", id, "denied", { reason: "not_own_branch" });
+    redirect(`/admin/news?e=${encodeURIComponent("Можно менять только новости своего филиала")}`);
+  }
+  await q(
+    `update news set title = $2, summary = $3, body = $4, category_id = (select id from categories where kind = 'news' and slug = $5), branch_id = $6,
+       updated_at = now(), version = version + 1,
+       status = case when status = 'published' and not $7 then 'review' else status end,
+       published_at = case when status = 'published' and not $7 then null else published_at end
+     where id = $1`,
+    [id, ...values, can(u, "content.publish")],
+  );
+  await audit(u, "news.update", "news", id, "ok");
+  redirect(`/admin/news/${id}?m=saved`);
+}
+
+export async function newsTransition(f: FormData) {
+  const u = await need();
+  const id = Number(s(f, "id", 12));
+  const cur = (await q<{ branch_id: number | null }>(`select branch_id from news where id = $1`, [id]))[0];
+  if (cur && can(u, "branches.edit_own") && !can(u, "branches.edit_all") && cur.branch_id !== u.branch_id) {
+    await audit(u, "workflow", "news", id, "denied", { reason: "not_own_branch" });
+    redirect(`/admin/news?e=${encodeURIComponent("Можно работать только с новостями своего филиала")}`);
+  }
+  const { transitionEntity } = await import("@/lib/workflow");
+  const r = await transitionEntity(u, "news", id, s(f, "t", 20) as Transition, s(f, "comment", 1000));
+  redirect(`/admin/news/${id}?${r.ok ? `m=${s(f, "t", 20)}` : `e=${encodeURIComponent(r.error)}`}`);
+}
+
+// ---------- Информационные страницы ----------
+
+export async function savePage(f: FormData) {
+  const u = await need();
+  const id = Number(s(f, "id", 12));
+  if (!can(u, "pages.edit")) {
+    await audit(u, "page.update", "page", id, "denied");
+    redirect("/admin?e=denied");
+  }
+  const cur = (await q<{ version: number; title: unknown; body: unknown }>(`select version, title, body from pages where id = $1`, [id]))[0];
+  if (!cur) redirect("/admin/pages");
+  const t = { ru: s(f, "title_ru", 200), ...(s(f, "title_kk", 200) ? { kk: s(f, "title_kk", 200) } : {}), ...(s(f, "title_en", 200) ? { en: s(f, "title_en", 200) } : {}) };
+  const b = { ru: s(f, "body_ru", 40000), ...(s(f, "body_kk", 40000) ? { kk: s(f, "body_kk", 40000) } : {}), ...(s(f, "body_en", 40000) ? { en: s(f, "body_en", 40000) } : {}) };
+  if (!t.ru || !b.ru) redirect(`/admin/pages/${id}?e=${encodeURIComponent("Заголовок и текст на русском обязательны")}`);
+  // прежняя версия сохраняется, чтобы её можно было восстановить
+  await q(`insert into content_versions(entity_type, entity_id, version, data, author_id) values ('page',$1,$2,$3,$4) on conflict do nothing`, [
+    id, cur.version, { title: cur.title, body: cur.body }, u.id,
+  ]);
+  await q(`update pages set title = $2, body = $3, i18n_status = $4, updated_by = $5, updated_at = now(), version = version + 1 where id = $1`, [
+    id, t, b, { kk: b.kk ? "machine" : "none", en: b.en ? "machine" : "none" }, u.id,
+  ]);
+  await audit(u, "page.update", "page", id, "ok", { version: cur.version + 1 });
+  redirect(`/admin/pages/${id}?m=saved`);
+}

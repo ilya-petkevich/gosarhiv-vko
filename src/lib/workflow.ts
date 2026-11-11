@@ -31,12 +31,13 @@ const RULES: Record<Transition, { from: string[]; to: string; perms: string[] }>
   archive: { from: ["published", "approved", "draft", "rework"], to: "archived", perms: ["content.publish"] },
 };
 
-export type Kind = "document" | "collection" | "exhibition";
+export type Kind = "document" | "collection" | "exhibition" | "news";
 
 const ENT: Record<Kind, { table: string; label: string; link: (id: number) => string; editPerms: string[] }> = {
   document: { table: "documents", label: "запись", link: (id) => `/admin/catalog/${id}`, editPerms: ["content.create", "content.edit", "catalog.edit"] },
   collection: { table: "collections", label: "подборка", link: (id) => `/admin/showcase/collection/${id}`, editPerms: ["memory.edit"] },
   exhibition: { table: "exhibitions", label: "выставка", link: (id) => `/admin/showcase/exhibition/${id}`, editPerms: ["exhibitions.edit"] },
+  news: { table: "news", label: "новость", link: (id) => `/admin/news/${id}`, editPerms: ["news.edit"] },
 };
 export const entityLink = (kind: Kind, id: number) => ENT[kind].link(id);
 export const canEditEntity = (user: Staff, kind: Kind) => can(user, ...ENT[kind].editPerms);
@@ -81,6 +82,13 @@ export async function publishProblems(kind: Kind, id: number): Promise<string[]>
     if (!items[0].n) out.push("в выставке нет экспонатов");
     if (items[0].closed) out.push(`экспонатов из закрытых или неопубликованных записей: ${items[0].closed}`);
     if (items[0].rights) out.push(`экспонатов без отметки о проверке права на публикацию: ${items[0].rights}`);
+    return out;
+  }
+  if (kind === "news") {
+    const n = (await q<{ body: { ru?: string } | null; title: { ru?: string } }>(`select title, body from news where id = $1`, [id]))[0];
+    const out = [];
+    if (!n?.title?.ru) out.push("нет заголовка");
+    if (!n?.body?.ru) out.push("нет текста новости");
     return out;
   }
   return [];
