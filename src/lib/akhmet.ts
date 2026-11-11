@@ -503,11 +503,13 @@ function finish(raw: string, refs: Map<string, Source>, known: Set<string>, lang
   );
   text = text.replace(/\*\*|__|^#+\s*/gm, "");
   const paragraphs = text.split(/\n{2,}|\n(?=\S)/).map((p) => p.trim()).filter(Boolean).slice(0, 6);
+  const NOT_FOUND = /ничего не|не нашл|не нашлось|не обнаружен|нет (документ|запис|материал|сведен)|там ничего|no (records|documents|materials)|nothing|жоқ|табылмады/i;
   const sources = order.map((r) => refs.get(r)!);
 
   return {
     mode: "model",
-    mood: sources.length ? "found" : "sad",
+    // «не нашёл, но вот похожее» — грустное лицо, даже если есть ссылки на близкие записи
+    mood: sources.length && !NOT_FOUND.test(paragraphs[0] ?? "") ? "found" : "sad",
     paragraphs,
     sources,
     links: sources.length ? [] : [{ label: T[lang].linkCatalog, href: `/${lang}/catalog?tab=funds` }, { label: T[lang].linkCall, href: "tel:+77232255976" }],

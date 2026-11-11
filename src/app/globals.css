@@ -360,3 +360,36 @@ button.chip { cursor: pointer; font: inherit; font-size: 16px; }
 .price th { background: var(--ochre-soft); font-weight: 600; }
 .price .num { text-align: right; white-space: nowrap; font-weight: 600; }
 @media (max-width: 640px) { .price { font-size: 15px; } .price th:first-child, .price td:first-child { display: none; } }
+
+/* ---------- филиалы и карта ---------- */
+.br { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
+.br-top { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.br-top p { flex: 1; min-width: 260px; }
+.notice.ok { background: var(--green-soft); }
+.br-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: start; }
+@media (max-width: 1024px) { .br-grid { grid-template-columns: 1fr; } }
+.br-map-col { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
+@media (max-width: 1024px) { .br-map-col { position: static; } }
+.br-map { overflow: hidden; position: relative; }
+.map { height: 520px; width: 100%; background: var(--ochre-soft); }
+@media (max-width: 640px) { .map { height: 340px; } }
+.map-fail { position: absolute; inset: auto 12px 12px 12px; background: var(--surface); padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); z-index: 500; }
+.pin span { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.pin.main span { background: #1F1A16; }
+.pin.on span { width: 26px; height: 26px; background: var(--ochre); margin: -2px; }
+.leaflet-container { font-family: var(--font-onest), sans-serif; font-size: 15px; }
+.br-cur { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.from-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.from-row input { flex: 1; min-width: 200px; min-height: 52px; border: 2px solid var(--line); border-radius: 12px; padding: 0 14px; background: var(--surface); font-size: 17px; }
+.br-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.br-item { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 16px; }
+.br-item.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.br-pick { display: flex; gap: 14px; align-items: flex-start; background: none; border: 0; text-align: left; cursor: pointer; padding: 0; color: var(--ink); }
+.br-pick > span:last-child { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.br-pick b { font-size: 18px; }
+.pin-dot { flex: none; width: 16px; height: 16px; margin-top: 5px; border-radius: 50%; background: var(--accent); }
+.br-item.on .pin-dot { background: var(--ochre); }
+.br-meta { display: flex; flex-direction: column; gap: 2px; padding-left: 30px; overflow-wrap: anywhere; }
+.br-item .acts-row { padding-left: 30px; }
+@media (max-width: 640px) { .br-meta, .br-item .acts-row { padding-left: 0; } }
+@media (max-width: 640px) { .svc .btn { white-space: normal; text-align: left; } .price th:nth-child(3), .price td:nth-child(3) { display: none; } .price th, .price td { padding: 10px; } }

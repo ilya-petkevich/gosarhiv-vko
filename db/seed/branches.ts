@@ -45,3 +45,23 @@ export const BRANCHES: BranchSeed[] = [
   { slug: "ulken-naryn", name: { ru: "Филиал района Үлкен Нарын" }, short_name: { ru: "Үлкен Нарын" }, address: { ru: "район Үлкен Нарын, с. Улкен Нарын, ул. Огнева, 40" }, phone: "8 (72341) 2-15-99", email: "ba.ozhenov@akimvko.gov.kz", source: XLS },
   { slug: "shemonaikha", name: { ru: "Шемонаихинский районный филиал" }, short_name: { ru: "Шемонаиха" }, address: { ru: "Шемонаихинский район, г. Шемонаиха, ул. Жукова, здание 2" }, phone: "8 (72332) 6-23-58", email: "n.kusataev@akimvko.gov.kz", source: XLS },
 ];
+
+// Примерные координаты — центр населённого пункта (для Усть-Каменогорска — центр города),
+// проставлены разработчиком для демонстрации карты. Архив их не подтверждал: на сайте метки
+// подписаны «примерно», а маршрут строится по текстовому адресу (доп. ТЗ 3.3).
+export const APPROX_COORDS: Record<string, [number, number]> = {
+  main: [49.949, 82.628],
+  "ust-kamenogorsk-personnel": [49.962, 82.607],
+  ridder: [50.344, 83.512],
+  altai: [49.727, 84.272],
+  glubokoe: [50.136, 82.311],
+  zaisan: [47.467, 84.871],
+  "katon-karagai": [49.172, 85.614],
+  kurchum: [48.566, 83.655],
+  markakol: [48.68, 85.6],
+  samar: [49.031, 83.35],
+  tarbagatai: [47.613, 81.069],
+  ulan: [49.857, 82.497],
+  "ulken-naryn": [49.209, 84.512],
+  shemonaikha: [50.628, 81.909],
+};

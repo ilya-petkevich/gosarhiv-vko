@@ -3,6 +3,7 @@
 // Источники: Правила (приказ МКС РК № 159 от 29.05.2020, редакция с прежнего сайта архива),
 // памятка архива, постановление акимата ВКО № 289 от 15.12.2023 (цены сверены со сканом, стр. 10–14).
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dict, isLang } from "@/i18n/dict";
@@ -36,6 +37,13 @@ const PRICES: [string, string, string, string][] = [
   ["8.5.2", "Съёмка документа своим телефоном/фотоаппаратом в присутствии работника архива: XIX в. – 1945 г.", "кадр", "265,0"],
   ["8.5.3", "— 1946 г. – XXI в.", "кадр", "221,0"],
 ];
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string; slug: string }> }): Promise<Metadata> {
+  const { lang, slug } = await params;
+  if (!isLang(lang) || !["gov", "paid"].includes(slug)) return {};
+  const d = dict(lang);
+  return { title: slug === "gov" ? d.tiles.gov : d.tiles.paid };
+}
 
 export default async function Service({ params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
