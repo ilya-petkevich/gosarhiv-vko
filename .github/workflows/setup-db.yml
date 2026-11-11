@@ -1,0 +1,25 @@
+# Создание таблиц и начальных данных в базе стенда (Supabase): запускается вручную.
+# Секреты: DATABASE_URL (Session pooler), SUPABASE_URL, SUPABASE_SERVICE_KEY, DEMO_PASSWORD.
+# Повторный запуск безопасен: уже загруженное не дублируется.
+name: Загрузка данных в базу
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Миграции и начальные данные
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+        run: npx tsx scripts/setup.ts

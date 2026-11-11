@@ -43,6 +43,8 @@ async function makePostgres(url: string): Promise<Db> {
     max: Number(process.env.DB_POOL_MAX || 5),
     // пулер Supabase (transaction mode) не поддерживает подготовленные запросы
     prepare: false,
+    // шифрование, если сервер его поддерживает (Supabase — да, локальный Docker — нет); DB_SSL=require — строго
+    ssl: (process.env.DB_SSL as "require" | "prefer" | undefined) ?? (/@(localhost|127\.0\.0\.1|db)[:/]/.test(url) ? false : "prefer"),
     onnotice: () => {},
   });
   return {
