@@ -74,6 +74,12 @@ export default async function AboutPage({ params, searchParams }: P) {
       <Crumbs items={crumbs(title.text)} />
       <article className="page-art">
         <h1 lang={title.fallback ? "ru" : undefined}>{title.text}</h1>
+        {slug === "symbols" ? (
+          <div className="symbols">
+            <figure><img src="/img/kz-flag-20261112.svg" alt={d.symFlag} width={300} height={150} /><figcaption>{d.symFlag}</figcaption></figure>
+            <figure><img src="/img/kz-emblem-20261112.svg" alt={d.symEmblem} width={150} height={150} /><figcaption>{d.symEmblem}</figcaption></figure>
+          </div>
+        ) : null}
         {body.fallback ? <p className="notice">{d.notVerifiedTranslation}</p> : null}
         <div lang={body.fallback ? "ru" : undefined}><Md text={body.text} lang={lang} /></div>
         <p className="small muted page-src">{p.source ? `${t.source}: ${p.source}. ` : ""}{t.updated}: {p.updated_at}.</p>

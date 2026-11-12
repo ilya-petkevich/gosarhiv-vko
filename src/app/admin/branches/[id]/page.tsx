@@ -18,8 +18,8 @@ export default async function EditBranch({ params, searchParams }: { params: Pro
     redirect(`/admin/branches?e=${encodeURIComponent("Можно открывать и менять сведения только своего филиала")}`);
   }
   const { e, m } = await searchParams;
-  const b = (await q<{ id: number; name: { ru: string }; address: { ru: string }; phone: string | null; email: string | null; hours: { ru?: string } | null; is_visible: boolean; coords_verified: boolean }>(
-    `select id, name, address, phone, email, hours, is_visible, coords_verified from branches where id = $1`, [Number(id)],
+  const b = (await q<{ id: number; name: { ru: string }; address: { ru: string }; phone: string | null; email: string | null; director: string | null; hours: { ru?: string } | null; is_visible: boolean; coords_verified: boolean }>(
+    `select id, name, address, phone, email, director, hours, is_visible, coords_verified from branches where id = $1`, [Number(id)],
   ))[0];
   if (!b) notFound();
   return (
@@ -32,6 +32,7 @@ export default async function EditBranch({ params, searchParams }: { params: Pro
         <input type="hidden" name="id" value={b.id} />
         <label className="fld"><span className="label">Адрес *</span><input name="address" defaultValue={b.address.ru} required maxLength={300} /></label>
         <div className="grid2">
+          <label className="fld"><span className="label">Директор</span><input name="director" defaultValue={b.director ?? ""} maxLength={120} /></label>
           <label className="fld"><span className="label">Телефон</span><input name="phone" defaultValue={b.phone ?? ""} maxLength={60} /></label>
           <label className="fld"><span className="label">Почта</span><input name="email" type="email" defaultValue={b.email ?? ""} maxLength={120} /></label>
         </div>

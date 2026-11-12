@@ -19,6 +19,7 @@ export type BranchView = {
   phone: string | null;
   email: string | null;
   hours: string | null;
+  director: string | null;
   lat: number | null;
   lng: number | null;
   verified: boolean;
@@ -198,6 +199,7 @@ export function BranchesMap({ branches, t }: { branches: BranchView[]; t: Branch
                 </span>
               </button>
               <div className="br-meta small">
+                {b.director ? <span>{b.isMain ? t.directorMain : t.director}: {b.director}</span> : null}
                 <span>{t.phone}: {b.phone ? <a href={`tel:${b.phone.replace(/[^\d+]/g, "").replace(/^8/, "+7")}`}>{b.phone}</a> : t.noPhone}</span>
                 {b.email ? <span>{t.email}: <a href={`mailto:${b.email}`}>{b.email}</a></span> : null}
                 <span>{t.hours}: {b.hours ?? t.hoursUnknown}</span>

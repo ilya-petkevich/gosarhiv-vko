@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 type Row = {
-  slug: string; name: L10n; short_name: L10n | null; address: L10n; phone: string | null; email: string | null; hours: L10n | null;
+  slug: string; name: L10n; short_name: L10n | null; address: L10n; phone: string | null; email: string | null; director: string | null; hours: L10n | null;
   lat: number | null; lng: number | null; coords_verified: boolean; is_main: boolean;
 };
 
@@ -27,7 +27,7 @@ export default async function Branches({ params }: { params: Promise<{ lang: str
   const t = branchText(lang);
   const d = dict(lang);
   const rows = await q<Row>(
-    `select slug, name, short_name, address, phone, email, hours, lat, lng, coords_verified, is_main from branches where is_visible order by sort`,
+    `select slug, name, short_name, address, phone, email, director, hours, lat, lng, coords_verified, is_main from branches where is_visible order by sort`,
   );
   const branches: BranchView[] = rows.map((r) => ({
     slug: r.slug,
@@ -36,6 +36,7 @@ export default async function Branches({ params }: { params: Promise<{ lang: str
     address: pick(r.address, lang).text,
     phone: r.phone,
     email: r.email,
+    director: r.director,
     hours: r.hours ? pick(r.hours, lang).text : null,
     lat: r.lat,
     lng: r.lng,

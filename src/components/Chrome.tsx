@@ -6,6 +6,7 @@ import { Icon } from "./Icon";
 import { LangSwitch, ThemeToggle } from "./SiteTools";
 import { MainNav } from "./MainNav";
 import { MobileMenu, MobileBar } from "./MobileNav";
+import { ReadAloud } from "./ReadAloud";
 
 export const SOCIAL = {
   instagram: "https://www.instagram.com/arhiv_vko/",
@@ -22,6 +23,7 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
     { slug: "services", title: d.nav.services },
     { slug: "branches", title: d.nav.branches },
     { slug: "news", title: d.nav.news },
+    { slug: "about/compliance", title: d.nav.anticorruption },
   ];
   return (
     <>
@@ -36,6 +38,7 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
             </span>
           </div>
           <div className="group">
+            <ReadAloud lang={lang} labels={d.readAloud} />
             <Link className="row" href={`/${lang}/accessibility`}>
               <Icon name="eye" size={18} /> {d.lowVision}
             </Link>
@@ -48,7 +51,7 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
       </div>
       <header className="header">
         <div className="wrap bar">
-          <Link className="brand" href={`/${lang}`}>
+          <Link className="brand" href={`/${lang}`} aria-label={d.orgName}>
             <img src="/img/logo-gavko.png" alt="" width={84} height={84} />
             <span className="serif brand-full">{d.orgName}</span>
             <span className="serif brand-short">{d.orgShort}</span>
@@ -67,6 +70,7 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
                 <>
                   <LangSwitch lang={lang} label={d.langLabel} />
                   <ThemeToggle initial={theme} labels={{ light: d.themeLight, dark: d.themeDark, title: d.themeLabel }} />
+                  <ReadAloud lang={lang} labels={d.readAloud} className="m-row" />
                   <Link className="m-row" href={`/${lang}/accessibility`}><Icon name="eye" size={20} /> {d.lowVision}</Link>
                 </>
               }
@@ -79,6 +83,16 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
     </>
   );
 }
+
+// Официальные ресурсы внизу каждой страницы (замечание заказчика 12.11); те же ссылки — на странице «Полезные ссылки»
+const OFFICIAL: { href: string; host: string; name: Record<Lang, string> }[] = [
+  { href: "https://www.akorda.kz/ru", host: "akorda.kz", name: { ru: "Президент Республики Казахстан", kk: "Қазақстан Республикасының Президенті", en: "President of Kazakhstan" } },
+  { href: "https://www.gov.kz/memleket/entities/akimvko?lang=ru", host: "gov.kz", name: { ru: "Акимат Восточно-Казахстанской области", kk: "Шығыс Қазақстан облысының әкімдігі", en: "East Kazakhstan Region Akimat" } },
+  { href: "https://www.gov.kz/memleket/entities/vko-uca?lang=ru", host: "gov.kz", name: { ru: "Управление цифровизации и архивов ВКО", kk: "ШҚО цифрландыру және архивтер басқармасы", en: "EKR Department of Digitalization and Archives" } },
+  { href: "https://veteran-vko.kz/ru/", host: "veteran-vko.kz", name: { ru: "Ветераны Восточно-Казахстанской области", kk: "Шығыс Қазақстан облысының ардагерлері", en: "Veterans of East Kazakhstan" } },
+  { href: "https://www.qazlatyn.kz/converter/text", host: "qazlatyn.kz", name: { ru: "Конвертер на латиницу", kk: "Латын әліпбиіне конвертер", en: "Latin script converter" } },
+  { href: "https://egov.kz", host: "egov.kz", name: { ru: "Электронное правительство", kk: "Электрондық үкімет", en: "eGov — e-government" } },
+];
 
 export function Footer({ lang }: { lang: Lang }) {
   const d = dict(lang);
@@ -112,6 +126,7 @@ export function Footer({ lang }: { lang: Lang }) {
             <Link href={L("services/gov")}>{d.tiles.gov}</Link>
             <Link href={L("services/paid")}>{d.tiles.paid}</Link>
             <Link href={L("about/laws")}>{d.tiles.laws}</Link>
+            <Link href={L("about/compliance")}>{d.nav.anticorruption}</Link>
             <Link href={L("branches")}>{d.nav.branches}</Link>
             <Link href={L("faq")}>{d.faq}</Link>
           </div>
@@ -123,6 +138,19 @@ export function Footer({ lang }: { lang: Lang }) {
             <Link href={L("useful")}>{d.useful}</Link>
           </div>
         </div>
+        <nav className="official" aria-label={d.officialTitle}>
+          <Link className="sym" href={L("about/symbols")}>
+            <img src="/img/kz-emblem-20261112.svg" alt="" width={40} height={40} />
+            <img src="/img/kz-flag-20261112.svg" alt="" width={60} height={30} />
+            <span>{d.symTitle}</span>
+          </Link>
+          {OFFICIAL.map((o) => (
+            <a key={o.href} className="off" href={o.href} rel="noopener" target="_blank">
+              <b>{o.name[lang]}</b>
+              <span>{o.host}</span>
+            </a>
+          ))}
+        </nav>
         <div className="bottom">
           <span>© 2010–{new Date().getFullYear()} {d.orgShort}. {d.footerNote}</span>
           <Link href={L("privacy")}>{d.privacy}</Link>

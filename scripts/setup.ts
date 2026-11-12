@@ -7,7 +7,7 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { getDb } from "../src/lib/db";
 import { ROLES, PERMISSIONS, ROLE_PERMISSIONS, DEMO_USERS } from "../db/seed/roles";
-import { BRANCHES, APPROX_COORDS } from "../db/seed/branches";
+import { BRANCHES, APPROX_COORDS, DIRECTORS } from "../db/seed/branches";
 import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
 import { DEMO_EXHIBITIONS, DEMO_COLLECTIONS } from "../db/seed/showcase";
 import { EXTRA_PAGES, NEWS_CATEGORIES, DEMO_NEWS } from "../db/seed/pages";
@@ -54,6 +54,10 @@ async function seed() {
        on conflict (slug) do nothing`,
       [b.slug, b.name, b.short_name, b.address, b.phone, b.email ?? null, b.hours ?? null, b.lat ?? null, b.lng ?? null, b.is_main ?? false, b.source, i],
     );
+  }
+
+  for (const [slug, name] of Object.entries(DIRECTORS)) {
+    await db.query(`update branches set director = $2 where slug = $1 and director is null`, [slug, name]);
   }
 
   // примерные координаты для карты; подтверждённые архивом (coords_verified) не трогаем

@@ -177,16 +177,17 @@ export async function saveBranch(f: FormData) {
   }
   const phone = s(f, "phone", 60) || null;
   const email = s(f, "email", 120) || null;
+  const director = s(f, "director", 120) || null;
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`/admin/branches/${id}?e=${encodeURIComponent("Проверьте адрес почты")}`);
   const address = s(f, "address", 300);
   if (!address) redirect(`/admin/branches/${id}?e=${encodeURIComponent("Адрес обязателен")}`);
   const hours = s(f, "hours", 200);
   const visible = f.get("is_visible") === "on";
-  const before = (await q(`select address, phone, email, hours, is_visible from branches where id = $1`, [id]))[0];
+  const before = (await q(`select address, phone, email, director, hours, is_visible from branches where id = $1`, [id]))[0];
   await q(
     `update branches set address = jsonb_set(address, '{ru}', to_jsonb($2::text)), phone = $3, email = $4,
-       hours = case when $5 = '' then null else jsonb_build_object('ru', $5::text) end, is_visible = $6, updated_at = now() where id = $1`,
-    [id, address, phone, email, hours, visible],
+       hours = case when $5 = '' then null else jsonb_build_object('ru', $5::text) end, is_visible = $6, director = $7, updated_at = now() where id = $1`,
+    [id, address, phone, email, hours, visible, director],
   );
   await audit(u, "branch.update", "branch", id, "ok", { before });
   redirect(`/admin/branches/${id}?m=saved`);
