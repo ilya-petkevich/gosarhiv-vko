@@ -39,31 +39,72 @@ async function makePglite(): Promise<Db> {
 
 async function makePostgres(url: string): Promise<Db> {
   const { default: postgres } = await import("postgres");
-  const sql = postgres(url, {
-    max: Number(process.env.DB_POOL_MAX || 5),
-    // пулер Supabase (transaction mode) не поддерживает подготовленные запросы
-    prepare: false,
-    // шифрование, если сервер его поддерживает (Supabase — да, локальный Docker — нет); DB_SSL=require — строго
-    ssl: (process.env.DB_SSL as "require" | "prefer" | undefined) ?? (/@(localhost|127\.0\.0\.1|db)[:/]/.test(url) ? false : "prefer"),
-    onnotice: () => {},
-    // бессерверная среда: не держать простаивающие соединения (пулер может их оборвать) и не ждать вечно
-    idle_timeout: Number(process.env.DB_IDLE_TIMEOUT || 20),
-    max_lifetime: 60 * 5,
-    connect_timeout: 10,
-    connection: { statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS || 15000) },
-  });
+  const statementMs = Number(process.env.DB_STATEMENT_TIMEOUT_MS || 15000);
+  const open = () =>
+    postgres(url, {
+      max: Number(process.env.DB_POOL_MAX || 5),
+      // пулер Supabase (transaction mode) не поддерживает подготовленные запросы
+      prepare: false,
+      // шифрование, если сервер его поддерживает (Supabase — да, локальный Docker — нет); DB_SSL=require — строго
+      ssl: (process.env.DB_SSL as "require" | "prefer" | undefined) ?? (/@(localhost|127\.0\.0\.1|db)[:/]/.test(url) ? false : "prefer"),
+      onnotice: () => {},
+      // бессерверная среда: не держать простаивающие соединения (пулер может их оборвать) и не ждать вечно
+      idle_timeout: Number(process.env.DB_IDLE_TIMEOUT || 20),
+      max_lifetime: 60 * 5,
+      connect_timeout: 10,
+      connection: { statement_timeout: statementMs },
+    });
+  let sql = open();
+
+  // Vercel замораживает функцию между запросами; пулер за это время рвёт простаивающее соединение,
+  // и запрос в «мёртвый» сокет ждал ответа до лимита функции (300 с). Поэтому — свой таймаут:
+  // зависшее соединение сбрасывается вместе с пулом, запрос на чтение повторяется один раз на новом.
+  const clientMs = statementMs + 5000;
+  const guard = async <T,>(run: (s: typeof sql) => Promise<T>, ms: number): Promise<T> => {
+    const cur = sql;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        run(cur),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(Object.assign(new Error("db: нет ответа от базы"), { code: "DB_STALL" })), ms);
+        }),
+      ]);
+    } catch (e) {
+      if ((e as { code?: string }).code === "DB_STALL" && sql === cur) {
+        console.error("db: соединение зависло — пул пересоздан");
+        sql = open();
+        cur.end({ timeout: 0 }).catch(() => {});
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const readOnly = (text: string) => /^\s*select\b/i.test(text);
+
   return {
     kind: "postgres",
     async query<T>(text: string, params: unknown[] = []) {
-      return (await sql.unsafe(text, params as never[])) as unknown as T[];
+      const run = (s: typeof sql) => s.unsafe(text, params as never[]) as unknown as Promise<T[]>;
+      try {
+        return await guard(run, clientMs);
+      } catch (e) {
+        if ((e as { code?: string }).code === "DB_STALL" && readOnly(text)) return guard(run, clientMs);
+        throw e;
+      }
     },
     async exec(text: string) {
-      await sql.unsafe(text);
+      await guard((s) => s.unsafe(text) as unknown as Promise<unknown>, clientMs * 4);
     },
     async tx<T>(fn: (q: Db["query"]) => Promise<T>) {
-      return sql.begin(async (t) =>
-        fn(async <R,>(text: string, params: unknown[] = []) => (await t.unsafe(text, params as never[])) as unknown as R[]),
-      ) as Promise<T>;
+      return guard(
+        (s) =>
+          s.begin(async (t) =>
+            fn(async <R,>(text: string, params: unknown[] = []) => (await t.unsafe(text, params as never[])) as unknown as R[]),
+          ) as Promise<T>,
+        clientMs * 2,
+      );
     },
   };
 }
