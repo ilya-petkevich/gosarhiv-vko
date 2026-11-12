@@ -139,9 +139,11 @@ export function Footer({ lang }: { lang: Lang }) {
         </div>
         <nav className="official" aria-label={d.officialTitle}>
           <Link className="sym" href={L("about/symbols")}>
-            <img src="/img/kz-emblem-20261112.svg" alt="" width={40} height={40} />
-            <img src="/img/kz-flag-20261112.svg" alt="" width={60} height={30} />
-            <span>{d.symTitle}</span>
+            <span className="off-sym">
+              <img src="/img/kz-emblem-20261112.svg" alt="" width={40} height={40} />
+              <img src="/img/kz-flag-20261112.svg" alt="" width={60} height={30} />
+            </span>
+            <b>{d.symTitle}</b>
           </Link>
           {OFFICIAL.map((o) => (
             <a key={o.href} className="off" href={o.href} rel="noopener" target="_blank">
