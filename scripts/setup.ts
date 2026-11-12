@@ -7,7 +7,7 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { getDb } from "../src/lib/db";
 import { ROLES, PERMISSIONS, ROLE_PERMISSIONS, DEMO_USERS } from "../db/seed/roles";
-import { BRANCHES, APPROX_COORDS, DIRECTORS } from "../db/seed/branches";
+import { BRANCHES, APPROX_COORDS, DIRECTORS, BRANCH_ABOUT } from "../db/seed/branches";
 import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
 import { DEMO_EXHIBITIONS, DEMO_COLLECTIONS } from "../db/seed/showcase";
 import { EXTRA_PAGES, NEWS_CATEGORIES, DEMO_NEWS } from "../db/seed/pages";
@@ -56,6 +56,9 @@ async function seed() {
     );
   }
 
+  for (const [slug, text] of Object.entries(BRANCH_ABOUT)) {
+    await db.query(`update branches set description = jsonb_build_object('ru', $2::text) where slug = $1 and description is null`, [slug, text]);
+  }
   for (const [slug, name] of Object.entries(DIRECTORS)) {
     await db.query(`update branches set director = $2 where slug = $1 and director is null`, [slug, name]);
   }
@@ -291,6 +294,12 @@ async function seedPagesAndNews() {
     await db.query(
       `insert into pages(slug, section, title, body, source, status, sort) values ($1,$6,$2,$3,$4,'published',$5) on conflict (slug) do nothing`,
       [p.slug, { ru: p.title }, { ru: p.body }, p.source, i, p.section ?? "about"],
+    );
+    // страницы, которые в админке ещё не правили, получают новую версию текста из сида
+    await db.query(
+      `update pages set title = $2, body = $3, source = $4, section = $5, updated_at = now()
+       where slug = $1 and updated_by is null and version = 1 and (body->>'ru' is distinct from $6 or source is distinct from $4)`,
+      [p.slug, { ru: p.title }, { ru: p.body }, p.source, p.section ?? "about", p.body],
     );
   }
   for (const [i, c] of NEWS_CATEGORIES.entries()) {

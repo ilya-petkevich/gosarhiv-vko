@@ -3,6 +3,7 @@ import { dict, isLang, pick, type Lang, type L10n } from "@/i18n/dict";
 import { q } from "@/lib/db";
 import { Icon, type IconName } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
+import { OFFICIAL } from "@/components/Chrome";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
 import { listExhibitions } from "@/lib/showcase";
@@ -43,12 +44,12 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     ["user", d.tiles.personal, "catalog?tab=funds&kind=personal"],
     ["book", d.tiles.metric, "catalog?doc_type=metric_book"],
     ["image", d.tiles.media, "catalog?doc_type=photo"],
-    ["history", d.tiles.chronicle, "chronicle"],
     ["film", d.tiles.exhibitions, "exhibitions"],
     ["lamp", d.tiles.reading, "about/reading-room"],
     ["doc", d.tiles.gov, "services/gov"],
     ["receipt", d.tiles.paid, "services/paid"],
     ["scale", d.tiles.laws, "about/laws"],
+    ["check", d.nav.anticorruption, "anticorruption"],
   ];
   const quickIcons: IconName[] = ["doc", "pin", "calendar"];
 
@@ -225,6 +226,28 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="wrap section" aria-labelledby="off-title">
+        <div className="section-head">
+          <h2 id="off-title">{d.officialTitle}</h2>
+        </div>
+        <div className="off-grid">
+          <Link className="card off-card sym" href={L("about/symbols")}>
+            <span className="off-sym">
+              <img src="/img/kz-emblem-20261112.svg" alt="" width={44} height={44} />
+              <img src="/img/kz-flag-20261112.svg" alt="" width={66} height={33} />
+            </span>
+            <b>{d.symTitle}</b>
+          </Link>
+          {OFFICIAL.map((o) => (
+            <a key={o.href} className="card off-card" href={o.href} rel="noopener" target="_blank">
+              <span className="off-logo"><img src={o.logo} alt="" loading="lazy" /></span>
+              <b>{o.name[lang]}</b>
+              <span className="small muted">{o.host} ↗</span>
+            </a>
+          ))}
         </div>
       </section>
     </>

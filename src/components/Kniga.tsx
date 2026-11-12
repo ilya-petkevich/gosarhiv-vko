@@ -5,6 +5,7 @@
 export type Mood = "hello" | "think" | "found" | "sad";
 export type KnAnim = "flip" | "read" | "signal" | "nod" | "blink" | "look" | "sway";
 const INK = "#1F1A16";
+const SMILE = "M52 68q8 8 16 0";
 
 function Eyes({ mood }: { mood: Mood }) {
   const d = (x: number, y: number) => <circle cx={x} cy={y} r={3.6} fill={INK} stroke="none" />;
@@ -49,11 +50,25 @@ export function Kniga({ size = 120, mood = "hello", title, anim }: { size?: numb
         {anim === "flip" ? <path className="kn-page" d="M60 42c10-6 22-6 30-2v42c-8-4-20-4-30 2z" fill="#fff" /> : null}
         <path d="M60 42V31" />
         <circle className="kn-ball" cx={60} cy={27} r={3.6} fill="#fff" />
-        <g className="kn-eyes">
-          <Eyes mood={mood} />
+        <g className="kn-gaze">
+          <g className="kn-eyes">
+            <Eyes mood={mood} />
+          </g>
         </g>
-        <path className={anim && mood !== "sad" ? "kn-mouth" : undefined} d={mouth} />
-        {anim && mood !== "sad" ? <path className="kn-smile" d="M52 68q8 8 16 0" /> : null}
+        <path d={mouth}>
+          {/* улыбка — одна линия рта плавно меняет форму; начало и конец цикла совпадают, поэтому шва при повторе нет */}
+          {anim && mood !== "sad" ? (
+            <animate
+              attributeName="d"
+              dur="7s"
+              repeatCount="indefinite"
+              calcMode="spline"
+              keyTimes="0;0.45;0.55;0.85;1"
+              keySplines="0 0 1 1;0.45 0 0.25 1;0 0 1 1;0.45 0 0.25 1"
+              values={`${mouth};${mouth};${SMILE};${SMILE};${mouth}`}
+            />
+          ) : null}
+        </path>
         <path className="kn-bm" d="M70 80v13l4-3 4 3V79" />
       </g>
     </svg>

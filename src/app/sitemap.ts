@@ -15,13 +15,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: lastModified ? new Date(lastModified) : undefined,
     alternates: alt(path),
   });
-  const statics = ["", "/catalog", "/catalog?tab=funds", "/exhibitions", "/chronicle", "/news", "/branches", "/services/gov", "/services/paid", "/about", "/about/calendar"];
-  const pages = await q<{ slug: string; at: string }>(`select slug, updated_at::text at from pages where status = 'published'`);
+  const statics = ["", "/catalog", "/catalog?tab=funds", "/exhibitions", "/news", "/anticorruption", "/faq", "/useful", "/privacy", "/branches", "/services/gov", "/services/paid", "/about", "/about/calendar"];
+  const pages = await q<{ slug: string; at: string }>(`select slug, updated_at::text at from pages where status = 'published' and section = 'about'`);
   const funds = await q<{ id: number; at: string }>(`select f.id, f.updated_at::text at from funds f where ${FUND_VISIBLE} and not f.is_demo`);
   const docs = await q<{ uid: string; at: string }>(`select d.uid, d.updated_at::text at from documents d join funds f on f.id = d.fund_id where ${DOC_VISIBLE} and ${FUND_VISIBLE} and not d.is_demo`);
   const news = await q<{ slug: string; at: string }>(`select slug, published_at::text at from news where status = 'published' and not is_demo`);
   const ex = await q<{ slug: string; at: string }>(`select slug, updated_at::text at from exhibitions where status = 'published' and not is_demo`);
-  const cols = await q<{ slug: string; at: string }>(`select slug, updated_at::text at from collections where status = 'published' and not is_demo`);
   return [
     ...statics.map((p) => entry(p)),
     ...pages.map((p) => entry(`/about/${p.slug}`, p.at)),
@@ -29,6 +28,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...docs.map((d) => entry(`/catalog/doc/${d.uid}`, d.at)),
     ...news.map((n) => entry(`/news/${n.slug}`, n.at)),
     ...ex.map((e) => entry(`/exhibitions/${e.slug}`, e.at)),
-    ...cols.map((c) => entry(`/chronicle/${c.slug}`, c.at)),
   ];
 }

@@ -18,8 +18,8 @@ export default async function EditBranch({ params, searchParams }: { params: Pro
     redirect(`/admin/branches?e=${encodeURIComponent("Можно открывать и менять сведения только своего филиала")}`);
   }
   const { e, m } = await searchParams;
-  const b = (await q<{ id: number; name: { ru: string }; address: { ru: string }; phone: string | null; email: string | null; director: string | null; hours: { ru?: string } | null; is_visible: boolean; coords_verified: boolean }>(
-    `select id, name, address, phone, email, director, hours, is_visible, coords_verified from branches where id = $1`, [Number(id)],
+  const b = (await q<{ id: number; name: { ru: string }; address: { ru: string }; phone: string | null; email: string | null; director: string | null; description: { ru?: string } | null; hours: { ru?: string } | null; is_visible: boolean; coords_verified: boolean }>(
+    `select id, name, address, phone, email, director, description, hours, is_visible, coords_verified from branches where id = $1`, [Number(id)],
   ))[0];
   if (!b) notFound();
   return (
@@ -37,6 +37,7 @@ export default async function EditBranch({ params, searchParams }: { params: Pro
           <label className="fld"><span className="label">Почта</span><input name="email" type="email" defaultValue={b.email ?? ""} maxLength={120} /></label>
         </div>
         <label className="fld"><span className="label">Режим работы</span><input name="hours" defaultValue={b.hours?.ru ?? ""} maxLength={200} placeholder="Например: Пн–Пт 9:00–18:00" /></label>
+        <label className="fld"><span className="label">О филиале и фондах</span><textarea name="description" rows={8} defaultValue={b.description?.ru ?? ""} maxLength={6000} /></label>
         <label className="check"><input type="checkbox" name="is_visible" defaultChecked={b.is_visible} /> Показывать на карте и в списке</label>
         <p className="small muted">Координаты: {b.coords_verified ? "подтверждены" : "примерные, не подтверждены"}.</p>
         <div><button className="btn" type="submit">Сохранить</button></div>

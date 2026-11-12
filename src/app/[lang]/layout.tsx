@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { KnigaGaze } from "@/components/KnigaGaze";
 import { Onest, Literata } from "next/font/google";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
@@ -40,6 +41,7 @@ export default async function LangLayout({ children, params }: { children: React
         <Header lang={lang as Lang} theme={theme} />
         <main id="main">{children}</main>
         <Footer lang={lang as Lang} />
+        <KnigaGaze />
       </body>
     </html>
   );

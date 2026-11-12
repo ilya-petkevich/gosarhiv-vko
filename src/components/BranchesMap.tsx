@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as LMap, Marker } from "leaflet";
 import type { BranchText } from "@/i18n/branches";
 import { Icon } from "./Icon";
+import { Md } from "./Md";
 
 export type BranchView = {
   slug: string;
@@ -20,6 +21,7 @@ export type BranchView = {
   email: string | null;
   hours: string | null;
   director: string | null;
+  about: string | null;
   lat: number | null;
   lng: number | null;
   verified: boolean;
@@ -40,7 +42,7 @@ function km(a: [number, number], b: [number, number]) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export function BranchesMap({ branches, t }: { branches: BranchView[]; t: BranchText }) {
+export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: BranchText; lang: string }) {
   const mapEl = useRef<HTMLDivElement>(null);
   const map = useRef<LMap | null>(null);
   const markers = useRef<Record<string, Marker>>({});
@@ -204,6 +206,14 @@ export function BranchesMap({ branches, t }: { branches: BranchView[]; t: Branch
                 {b.email ? <span>{t.email}: <a href={`mailto:${b.email}`}>{b.email}</a></span> : null}
                 <span>{t.hours}: {b.hours ?? t.hoursUnknown}</span>
               </div>
+              {b.about ? (
+                <details className="br-about">
+                  <summary>{t.about}</summary>
+                  <div className="small"><Md text={b.about} lang={lang} /></div>
+                </details>
+              ) : (
+                <p className="small muted">{t.aboutUnknown}</p>
+              )}
               <div className="acts-row">
                 <a className="btn sec sm" href={gis(b)} target="_blank" rel="noopener"><Icon name="route" size={18} /> {t.route2gis}<span className="sr"> ({t.external})</span></a>
                 <a className="btn sec sm" href={google(b)} target="_blank" rel="noopener">{t.routeGoogle}<span className="sr"> ({t.external})</span></a>
