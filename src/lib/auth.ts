@@ -117,7 +117,10 @@ export async function currentStaff(): Promise<Staff | null> {
     if (u) await q(`delete from sessions where id = $1`, [sha(token)]);
     return null;
   }
-  await q(`update sessions set last_seen_at = now() where id = $1 and last_seen_at < now() - interval '1 minute'`, [sha(token)]);
+  // отметка активности не должна ронять страницу, если база ответила не сразу
+  await q(`update sessions set last_seen_at = now() where id = $1 and last_seen_at < now() - interval '1 minute'`, [sha(token)]).catch((e) =>
+    console.error("auth: не удалось обновить активность сессии", e),
+  );
   const roles = (await q<{ role_code: string }>(`select role_code from user_roles where user_id = $1`, [u.id])).map((r) => r.role_code);
   const perms = new Set(
     (await q<{ perm_code: string }>(`select distinct rp.perm_code from user_roles ur join role_permissions rp on rp.role_code = ur.role_code where ur.user_id = $1`, [u.id])).map(

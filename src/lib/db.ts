@@ -56,11 +56,28 @@ async function makePostgres(url: string): Promise<Db> {
     });
   let sql = open();
 
+  // После простоя (функция была заморожена) старые соединения почти наверняка мертвы:
+  // пул открывается заново до запроса, а не после 20 с ожидания.
+  const staleMs = Number(process.env.DB_STALE_MS || 15000);
+  let lastUsed = Date.now();
+  let inFlight = 0;
+  const fresh = () => {
+    const now = Date.now();
+    if (inFlight === 0 && now - lastUsed > staleMs) {
+      const old = sql;
+      sql = open();
+      old.end({ timeout: 0 }).catch(() => {});
+    }
+    lastUsed = now;
+  };
+
   // Vercel замораживает функцию между запросами; пулер за это время рвёт простаивающее соединение,
   // и запрос в «мёртвый» сокет ждал ответа до лимита функции (300 с). Поэтому — свой таймаут:
   // зависшее соединение сбрасывается вместе с пулом, запрос на чтение повторяется один раз на новом.
   const clientMs = statementMs + 5000;
   const guard = async <T,>(run: (s: typeof sql) => Promise<T>, ms: number): Promise<T> => {
+    fresh();
+    inFlight++;
     const cur = sql;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -79,6 +96,8 @@ async function makePostgres(url: string): Promise<Db> {
       throw e;
     } finally {
       clearTimeout(timer);
+      inFlight--;
+      lastUsed = Date.now();
     }
   };
   const readOnly = (text: string) => /^\s*select\b/i.test(text);
