@@ -3,6 +3,7 @@ import { dict, isLang, pick, type Lang, type L10n } from "@/i18n/dict";
 import { q } from "@/lib/db";
 import { Icon, type IconName } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
+import { HeroShelf } from "@/components/HeroShelf";
 import { OFFICIAL } from "@/components/Chrome";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
@@ -14,12 +15,6 @@ import { contentText } from "@/i18n/content";
 export const dynamic = "force-dynamic";
 
 type BranchRow = { slug: string; name: L10n; address: L10n; phone: string | null; lat: number | null; lng: number | null; coords_verified: boolean };
-
-// Полосы первого экрана («Citron · Prism»): сдвиг светлой части (наклон сверху вниз + неровность) и задержка волны
-const HERO_STRIPS: [number, number][] = Array.from({ length: 22 }, (_, i) => [
-  Math.round((58 - i * 1.3 + [0, 4, -2, 6, 1, -3, 5, 2, -4, 3, 0, 6, -2, 4, 1, -3, 5, -1, 3, 0, 4, -2][i]) * 10) / 10,
-  -Math.round(i * 0.45 * 100) / 100,
-]);
 
 export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params;
@@ -57,9 +52,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     <>
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-fx" aria-hidden="true">
-          {HERO_STRIPS.map(([h0, hd], i) => (
-            <i key={i} style={{ "--h0": `${h0}%`, "--hd": `${hd}s` } as React.CSSProperties} />
-          ))}
+          <HeroShelf />
         </div>
         <h1 id="hero-title" className="sr">{d.orgName}</h1>
         <div className="wrap">

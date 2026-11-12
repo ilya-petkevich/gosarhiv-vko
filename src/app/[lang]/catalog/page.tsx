@@ -7,6 +7,7 @@ import { Crumbs, DocRow, Pager } from "@/components/CatalogParts";
 import { Icon } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
 import { FiltersBox } from "@/components/FiltersBox";
+import { Md } from "@/components/Md";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function Catalog({ params, searchParams }: { params: Promis
     searchFunds(tab === "funds" ? f : { ...f, page: 1 }),
     catalogFacets(),
   ]);
+  const branchInfo = tab === "funds" && f.branch ? facets.allBranches.find((x) => x.slug === f.branch) ?? null : null;
   const parsed = docs.parsed;
 
   const base = `/${lang}/catalog`;
@@ -70,7 +72,7 @@ export default async function Catalog({ params, searchParams }: { params: Promis
   else if (parsed.decadeFrom) active.push({ label: `${parsed.decadeFrom}–${parsed.decadeTo} (${t.fromQuery})`, href: qs({ q: parsed.text, page: undefined }) });
   if (f.fund) active.push({ label: `${t.fund} ${f.fund}`, href: qs({ fund: undefined, page: undefined }) });
   if (f.branch) {
-    const b = facets.branches.find((x) => x.slug === f.branch);
+    const b = facets.allBranches.find((x) => x.slug === f.branch);
     active.push({ label: b ? pick(b.short_name, lang).text : f.branch, href: qs({ branch: undefined, page: undefined }) });
   }
   if (f.copy) active.push({ label: t.onlyCopy, href: qs({ copy: undefined, page: undefined }) });
@@ -161,7 +163,16 @@ export default async function Catalog({ params, searchParams }: { params: Promis
                 <label className="check"><input type="checkbox" name="copy" value="1" defaultChecked={f.copy} /> {t.onlyCopy}</label>
               </>
             ) : (
-              <label className="check"><input type="checkbox" name="kind" value="personal" defaultChecked={f.kind === "personal"} /> {t.onlyPersonal}</label>
+              <>
+                <label className="fld">
+                  <span className="label">{t.branch}</span>
+                  <select name="branch" defaultValue={f.branch}>
+                    <option value="">{t.anyBranch}</option>
+                    {facets.allBranches.map((x) => <option key={x.slug} value={x.slug}>{pick(x.short_name, lang).text}</option>)}
+                  </select>
+                </label>
+                <label className="check"><input type="checkbox" name="kind" value="personal" defaultChecked={f.kind === "personal"} /> {t.onlyPersonal}</label>
+              </>
             )}
             <label className="fld">
               <span className="label">{t.sort}</span>
@@ -179,7 +190,17 @@ export default async function Catalog({ params, searchParams }: { params: Promis
           <p className="found"><b>{t.found(res.total)}</b></p>
           {tab === "docs" && docs.fuzzy ? <p className="notice"><Icon name="help" size={20} /> {t.fuzzy}</p> : null}
 
-          {empty ? (
+          {empty && tab === "funds" && branchInfo ? (
+            <div className="card branch-funds">
+              <h2 className="h3">{pick(branchInfo.name, lang).text}</h2>
+              <p className="muted">{t.branchNoList}</p>
+              {branchInfo.description ? <div className="small"><Md text={pick(branchInfo.description, lang).text} lang={lang} /></div> : null}
+              <div className="acts">
+                <Link className="btn sec" href={`/${lang}/branches#${branchInfo.slug}`}><Icon name="pin" size={18} /> {t.branchCard}</Link>
+                <Link className="btn sec" href={`${base}?tab=funds`}>{t.resetFilters}</Link>
+              </div>
+            </div>
+          ) : empty ? (
             <div className="card nothing">
               <Kniga size={96} mood="sad" />
               <h2 className="h3">{t.nothingTitle(f.q ?? "")}</h2>

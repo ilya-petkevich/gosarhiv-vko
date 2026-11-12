@@ -85,9 +85,9 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
 
 // Официальные ресурсы внизу каждой страницы (замечание заказчика 12.11); те же ссылки — на странице «Полезные ссылки»
 export const OFFICIAL: { href: string; host: string; logo: string; name: Record<Lang, string> }[] = [
-  { href: "https://www.akorda.kz/ru", logo: "/img/off/akorda-emblem-20261112.png", host: "akorda.kz", name: { ru: "Президент Республики Казахстан", kk: "Қазақстан Республикасының Президенті", en: "President of Kazakhstan" } },
-  { href: "https://www.gov.kz/memleket/entities/akimvko?lang=ru", logo: "/img/off/govkz-emblem-20261112.png", host: "gov.kz", name: { ru: "Акимат Восточно-Казахстанской области", kk: "Шығыс Қазақстан облысының әкімдігі", en: "East Kazakhstan Region Akimat" } },
-  { href: "https://www.gov.kz/memleket/entities/vko-uca?lang=ru", logo: "/img/off/govkz-emblem-20261112.png", host: "gov.kz", name: { ru: "Управление цифровизации и архивов ВКО", kk: "ШҚО цифрландыру және архивтер басқармасы", en: "EKR Department of Digitalization and Archives" } },
+  { href: "https://www.akorda.kz/ru", logo: "/img/off/govkz-emblem-20261112.png", host: "akorda.kz", name: { ru: "Президент Республики Казахстан", kk: "Қазақстан Республикасының Президенті", en: "President of Kazakhstan" } },
+  { href: "https://www.gov.kz/memleket/entities/akimvko?lang=ru", logo: "/img/off/govkz-20261112.svg", host: "gov.kz", name: { ru: "Акимат Восточно-Казахстанской области", kk: "Шығыс Қазақстан облысының әкімдігі", en: "East Kazakhstan Region Akimat" } },
+  { href: "https://www.gov.kz/memleket/entities/vko-uca?lang=ru", logo: "/img/off/govkz-20261112.svg", host: "gov.kz", name: { ru: "Управление цифровизации и архивов ВКО", kk: "ШҚО цифрландыру және архивтер басқармасы", en: "EKR Department of Digitalization and Archives" } },
   { href: "https://veteran-vko.kz/ru/", logo: "/img/off/veteran-vko-20261112.jpg", host: "veteran-vko.kz", name: { ru: "Ветераны Восточно-Казахстанской области", kk: "Шығыс Қазақстан облысының ардагерлері", en: "Veterans of East Kazakhstan" } },
   { href: "https://www.qazlatyn.kz/converter/text", logo: "/img/off/qazlatyn-20261112.png", host: "qazlatyn.kz", name: { ru: "Конвертер на латиницу", kk: "Латын әліпбиіне конвертер", en: "Latin script converter" } },
   { href: "https://egov.kz", logo: "/img/off/egov-20261112.svg", host: "egov.kz", name: { ru: "Электронное правительство", kk: "Электрондық үкімет", en: "eGov — e-government" } },

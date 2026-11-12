@@ -138,22 +138,14 @@ h3 { font-size: 19px; line-height: 1.3; font-weight: 600; }
 /* ---------- первый экран ---------- */
 .hero { position: relative; overflow: hidden; isolation: isolate; background: var(--band); color: #fff; padding: 28px 0 40px; }
 .hero > .wrap { position: relative; z-index: 1; }
-/* «Citron · Prism» (feralui.dev/gradients): 22 полосы, тёмно-зелёный → лимонный, наклон, «дыхание» с волной по полосам */
-@property --hx { syntax: "<percentage>"; inherits: false; initial-value: 40%; }
-.hero-fx { position: absolute; inset: -12px; z-index: 0; display: flex; flex-direction: column; filter: blur(5px); pointer-events: none; }
-.hero-fx i {
-  flex: 1;
-  --hx: var(--h0);
-  background: linear-gradient(90deg, #26483D 0%, #26483D calc(var(--hx) - 4%), #557D57 calc(var(--hx) + 10%), #A4B963 calc(var(--hx) + 24%), #D6D998 calc(var(--hx) + 36%), #F2EDCC calc(var(--hx) + 50%));
-  animation: hx-breathe 10s ease-in-out var(--hd) infinite alternate;
-}
-@keyframes hx-breathe { from { --hx: var(--h0); } to { --hx: calc(var(--h0) - 14%); } }
+/* «Citron · Prism» (feralui.dev/gradients): полосы-«полки» рисует HeroShelf на canvas; без JS — статичный градиент */
+.hero-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(105deg, #26483D 0%, #26483D 38%, #557D57 50%, #A4B963 64%, #D6D998 76%, #F2EDCC 92%); }
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hero-fx::after { content: ""; position: absolute; inset: 0; opacity: .05; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
-:root[data-theme="dark"] .hero-fx { filter: blur(5px) brightness(.72) saturate(.9); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero-fx { filter: blur(5px) brightness(.72) saturate(.9); } }
-@media (prefers-reduced-motion: reduce) { .hero-fx i { animation: none; } }
+:root[data-theme="dark"] .hero-fx { filter: brightness(.72) saturate(.9); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero-fx { filter: brightness(.72) saturate(.9); } }
 /* на телефоне светлая часть полос уходит правее — под текстом остаются тёмные и средние тона */
-@media (max-width: 640px) { .hero-fx { right: -65%; } .hero .bubble { text-shadow: 0 1px 2px rgba(10,24,19,.55); } }
+@media (max-width: 640px) { .hero .bubble { text-shadow: 0 1px 2px rgba(10,24,19,.55); } }
 /* текст первого экрана читается и над светлой частью полос */
 .hero .tile, .hero .quick a, .hero .chips a, .hero .ai-note { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .hero .tile { padding: 12px 6px; border-radius: 16px; background: rgba(18,38,31,.42); }
@@ -263,6 +255,9 @@ h3 { font-size: 19px; line-height: 1.3; font-weight: 600; }
 @keyframes mic-pulse { 50% { transform: scale(1.18); } }
 .off-logo { display: inline-flex; align-items: center; justify-content: flex-start; height: 44px; padding: 4px 8px; margin-bottom: 4px; border-radius: 8px; background: #fff; align-self: flex-start; }
 .off-logo img { height: 36px; width: auto; max-width: 150px; object-fit: contain; border-radius: 4px; }
+.branch-funds { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.branch-funds .acts { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.branch-funds ul { padding-left: 18px; }
 .footer .official { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 36px; }
 .footer .official a { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 64px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; opacity: 1; transition: border-color .2s, background-color .2s; }
 .footer .official a:hover { text-decoration: none; border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.05); }

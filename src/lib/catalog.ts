@@ -209,11 +209,12 @@ export async function searchFunds(f: Filters & { kind?: string }) {
   if (from) where.push(`coalesce(f.year_to, f.year_from) >= ${add(from)}`);
   if (to) where.push(`f.year_from <= ${add(to)}`);
   if (f.kind === "personal") where.push(`f.kind = 'personal'`);
+  if (f.branch) where.push(`b.slug = ${add(f.branch)}`);
   const order =
     f.sort === "old" ? "f.year_from asc nulls last, f.id" :
     f.sort === "new" ? "f.year_from desc nulls last, f.id" :
     p.text ? `${rank} desc, f.id` : "f.is_demo desc, f.id";
-  const base = `from funds f where ${where.join(" and ")}`;
+  const base = `from funds f left join branches b on b.id = f.branch_id where ${where.join(" and ")}`;
   const total = (await q<{ n: number }>(`select count(*)::int as n ${base}`, params))[0].n;
   params.push(PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const rows = await q<FundHit>(
@@ -326,5 +327,9 @@ export async function catalogFacets() {
   const branches = await q<{ slug: string; short_name: L10n }>(
     `select b.slug, b.short_name from branches b where b.is_visible and exists (select 1 from documents d join funds f on f.id = d.fund_id where d.branch_id = b.id and ${DOC_VISIBLE} and ${FUND_VISIBLE}) order by b.sort`,
   );
-  return { funds, branches };
+  // для вкладки «Фонды»: архив и все филиалы — у филиалов без перечня показывается их сводка о фондах
+  const allBranches = await q<{ slug: string; short_name: L10n; name: L10n; description: L10n | null }>(
+    `select b.slug, b.short_name, b.name, b.description from branches b where b.is_visible order by b.sort`,
+  );
+  return { funds, branches, allBranches };
 }
