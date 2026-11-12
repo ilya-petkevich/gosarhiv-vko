@@ -62,7 +62,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
           <div className="hero-main">
             <div className="akhmet">
-              <Kniga size={140} title="Ахмет" />
+              <Kniga size={140} title="Ахмет" anim="blink" />
               <div className="bubble">
                 <b>{d.hello}</b>
                 <br />

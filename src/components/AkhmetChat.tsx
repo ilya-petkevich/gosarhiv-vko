@@ -141,7 +141,7 @@ export function AkhmetChat({ lang, t, initial }: { lang: string; t: L; initial?:
           <div className={i < stillUpTo ? "turn still" : "turn"} key={i}>
             <div className="q-bubble">{it.q}</div>
             <div className="a-row">
-              <Kniga size={48} mood={it.a ? it.a.mood : it.error ? "sad" : "think"} />
+              <Kniga size={48} mood={it.a ? it.a.mood : it.error ? "sad" : "think"} anim={!it.a && !it.error ? "flip" : undefined} />
               <div className="a-col">
                 {!it.a && !it.error ? <div className="card a-card muted rise">{t.thinking}<span className="thinking" aria-hidden="true"><i /><i /><i /></span></div> : null}
                 {it.error ? <div className="card a-card rise">{t.error}</div> : null}

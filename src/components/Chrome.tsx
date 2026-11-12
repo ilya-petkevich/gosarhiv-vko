@@ -5,6 +5,7 @@ import { dict, type Lang } from "@/i18n/dict";
 import { Icon } from "./Icon";
 import { LangSwitch, ThemeToggle } from "./SiteTools";
 import { MainNav } from "./MainNav";
+import { MobileMenu, MobileBar } from "./MobileNav";
 
 export const SOCIAL = {
   instagram: "https://www.instagram.com/arhiv_vko/",
@@ -49,7 +50,8 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
         <div className="wrap bar">
           <Link className="brand" href={`/${lang}`}>
             <img src="/img/logo-gavko.png" alt="" width={84} height={84} />
-            <span className="serif">{d.orgName}</span>
+            <span className="serif brand-full">{d.orgName}</span>
+            <span className="serif brand-short">{d.orgShort}</span>
           </Link>
           <div className="tools">
             <LangSwitch lang={lang} label={d.langLabel} />
@@ -57,10 +59,23 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
             <Link className="btn sm catalog-btn" href={`/${lang}/catalog`}>
               <Icon name="search" size={20} /> {d.catalogBtn}
             </Link>
+            <MobileMenu
+              lang={lang}
+              items={nav}
+              label={d.mob.menu}
+              extra={
+                <>
+                  <LangSwitch lang={lang} label={d.langLabel} />
+                  <ThemeToggle initial={theme} labels={{ light: d.themeLight, dark: d.themeDark, title: d.themeLabel }} />
+                  <Link className="m-row" href={`/${lang}/accessibility`}><Icon name="eye" size={20} /> {d.lowVision}</Link>
+                </>
+              }
+            />
           </div>
         </div>
         <MainNav lang={lang} items={nav} label={d.orgShort} />
       </header>
+      <MobileBar lang={lang} labels={d.mob} />
     </>
   );
 }

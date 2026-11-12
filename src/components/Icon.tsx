@@ -40,6 +40,7 @@ const P = {
   "check": "<path d=\"m5 12 5 5 9-10\"/>",
   "x": "<path d=\"M6 6l12 12M18 6 6 18\"/>",
   "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>",
+  "home": "<path d=\"M4 11l8-7 8 7\"/><path d=\"M6 9.5V20h12V9.5\"/><path d=\"M10 20v-6h4v6\"/>",
   "menu": "<path d=\"M4 7h16M4 12h16M4 17h16\"/>"
 } as const;
 

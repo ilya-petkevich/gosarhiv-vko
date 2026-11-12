@@ -23,6 +23,7 @@ export default async function Assistant({ params, searchParams }: { params: Prom
   const d = dict(lang);
   const t = d.ai;
   // функции в клиентский компонент не передаются
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { providerNote, ...chatText } = t;
   return (
     <div className="wrap">
@@ -30,10 +31,10 @@ export default async function Assistant({ params, searchParams }: { params: Prom
       <div className="ai-grid">
         <aside className="ai-side">
           <div className="card ai-card">
-            <Kniga size={100} title="Ахмет" />
+            <Kniga size={100} title="Ахмет" anim="blink" />
             <h1 className="h3">{t.title}</h1>
             <p className="small muted">{t.about}</p>
-            {AI_INFO.model ? <p className="small muted">{providerNote(AI_INFO.model)}</p> : <span className="tag">{t.templateTag}</span>}
+            {AI_INFO.model ? null : <span className="tag">{t.templateTag}</span>}
           </div>
           <div className="card ai-card left">
             <b>{t.canAsk}</b>

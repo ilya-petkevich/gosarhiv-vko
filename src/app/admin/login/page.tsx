@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentStaff } from "@/lib/auth";
 import { loginAction } from "../actions";
+import { LoginForm } from "@/components/LoginForm";
 
 export const metadata = { title: "Вход" };
 
@@ -20,11 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
       <img className="logo" src="/img/logo-gavko.png" alt="" width={64} height={64} />
       <h1 className="h3">Вход для сотрудников архива</h1>
       {e && MSG[e] ? <p className={`notice${e === "bye" ? " ok" : ""}`} role="alert">{MSG[e]}</p> : null}
-      <form action={loginAction} className="adm-form">
-        <label className="fld"><span className="label">Логин</span><input name="login" autoComplete="username" required maxLength={64} /></label>
-        <label className="fld"><span className="label">Пароль</span><input name="password" type="password" autoComplete="current-password" required maxLength={200} /></label>
-        <button className="btn" type="submit">Войти</button>
-      </form>
+      <LoginForm action={loginAction} />
       <p className="small muted">Демо-стенд: тестовые учётные записи выдаются комиссии отдельно.</p>
     </div>
   );

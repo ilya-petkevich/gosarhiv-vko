@@ -17,6 +17,7 @@ export function pick(v: L10n | null | undefined, lang: Lang): { text: string; fa
 export const t = (v: L10n | null | undefined, lang: Lang) => pick(v, lang).text;
 
 const ru = {
+  mob: { menu: "Меню", home: "Главная", catalog: "Каталог", ai: "Помощник", branches: "Филиалы", call: "Позвонить" },
   langName: "Рус",
   orgName: "Государственный архив Восточно-Казахстанской области",
   orgShort: "Госархив ВКО",
@@ -192,6 +193,7 @@ const ru = {
 type Dict = typeof ru;
 
 const kk: Dict = {
+  mob: { menu: "Мәзір", home: "Басты бет", catalog: "Каталог", ai: "Көмекші", branches: "Филиалдар", call: "Қоңырау" },
   langName: "Қаз",
   orgName: "Шығыс Қазақстан облысының мемлекеттік архиві",
   orgShort: "ШҚО мемлекеттік архиві",
@@ -365,6 +367,7 @@ const kk: Dict = {
 };
 
 const en: Dict = {
+  mob: { menu: "Menu", home: "Home", catalog: "Catalog", ai: "Assistant", branches: "Branches", call: "Call" },
   langName: "Eng",
   orgName: "State Archive of East Kazakhstan Region",
   orgShort: "EKR State Archive",
