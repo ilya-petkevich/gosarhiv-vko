@@ -113,16 +113,19 @@ export function Footer({ lang }: { lang: Lang }) {
             <Link href={L("services/paid")}>{d.tiles.paid}</Link>
             <Link href={L("about/laws")}>{d.tiles.laws}</Link>
             <Link href={L("branches")}>{d.nav.branches}</Link>
+            <Link href={L("faq")}>{d.faq}</Link>
           </div>
           <div className="col">
             <b>{d.footerLinks}</b>
             <a className="ext" href="https://egov.kz" rel="noopener" target="_blank">eGov.kz</a>
             <a className="ext" href="https://eotinish.kz" rel="noopener" target="_blank">e-Otinish</a>
             <a className="ext" href="https://adilet.zan.kz" rel="noopener" target="_blank">ИПС «Әділет»</a>
+            <Link href={L("useful")}>{d.useful}</Link>
           </div>
         </div>
         <div className="bottom">
           <span>© 2010–{new Date().getFullYear()} {d.orgShort}. {d.footerNote}</span>
+          <Link href={L("privacy")}>{d.privacy}</Link>
         </div>
       </div>
     </footer>

@@ -285,8 +285,8 @@ async function seedPagesAndNews() {
   const fromDocs = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "seed", "data", "pages.json"), "utf8")) as typeof EXTRA_PAGES;
   for (const [i, p] of [...fromDocs, ...EXTRA_PAGES].entries()) {
     await db.query(
-      `insert into pages(slug, section, title, body, source, status, sort) values ($1,'about',$2,$3,$4,'published',$5) on conflict (slug) do nothing`,
-      [p.slug, { ru: p.title }, { ru: p.body }, p.source, i],
+      `insert into pages(slug, section, title, body, source, status, sort) values ($1,$6,$2,$3,$4,'published',$5) on conflict (slug) do nothing`,
+      [p.slug, { ru: p.title }, { ru: p.body }, p.source, i, p.section ?? "about"],
     );
   }
   for (const [i, c] of NEWS_CATEGORIES.entries()) {

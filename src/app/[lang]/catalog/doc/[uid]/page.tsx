@@ -114,7 +114,7 @@ export default async function DocPage({ params }: P) {
             {doc.is_demo ? <span className="tag red">{t.demoRecord}</span> : null}
           </div>
           <h1 lang={title.fallback ? "ru" : undefined}>{title.text}</h1>
-          {title.fallback ? <p className="notice"><Icon name="globe" size={20} /> {d.notVerifiedTranslation}</p> : null}
+          {title.fallback || (desc.text && desc.fallback) ? <p className="notice"><Icon name="globe" size={20} /> {d.notVerifiedTranslation}</p> : null}
 
           {doc.cipher ? (
             <div className="card cipher-box">

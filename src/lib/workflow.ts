@@ -44,9 +44,16 @@ export const canEditEntity = (user: Staff, kind: Kind) => can(user, ...ENT[kind]
 
 const permsFor = (kind: Kind, t: Transition) => (t === "submit" ? ENT[kind].editPerms : RULES[t].perms);
 
-export function allowedTransitions(user: Staff, status: string, publishStatus: string | null, kind: Kind = "document"): Transition[] {
+// Проверка «вторым человеком»: автор не одобряет и не публикует свой материал сам (ТЗ 6.7)
+const SELF_BLOCKED: Transition[] = ["approve", "publish"];
+
+export function allowedTransitions(user: Staff, status: string, publishStatus: string | null, kind: Kind = "document", createdBy: string | null = null): Transition[] {
   return (Object.keys(RULES) as Transition[]).filter(
-    (t) => RULES[t].from.includes(status) && can(user, ...permsFor(kind, t)) && !(t === "publish" && kind === "document" && publishStatus !== "public"),
+    (t) =>
+      RULES[t].from.includes(status) &&
+      can(user, ...permsFor(kind, t)) &&
+      !(t === "publish" && kind === "document" && publishStatus !== "public") &&
+      !(SELF_BLOCKED.includes(t) && createdBy === user.id),
   );
 }
 
@@ -98,8 +105,8 @@ export async function transitionEntity(user: Staff, kind: Kind, id: number, t: T
   if (!Object.prototype.hasOwnProperty.call(RULES, t) || !ENT[kind]) return { ok: false, error: "Неизвестное действие" };
   const rule = RULES[t];
   const e = ENT[kind];
-  const row = (await q<{ status: string; publish_status: string | null; title: { ru: string } }>(
-    `select status, ${kind === "document" ? "publish_status" : "null::text as publish_status"}, title from ${e.table} where id = $1`,
+  const row = (await q<{ status: string; publish_status: string | null; title: { ru: string }; created_by: string | null }>(
+    `select status, ${kind === "document" ? "publish_status" : "null::text as publish_status"}, title, created_by from ${e.table} where id = $1`,
     [id],
   ))[0];
   if (!row) return { ok: false, error: "Не найдено" };
@@ -110,6 +117,10 @@ export async function transitionEntity(user: Staff, kind: Kind, id: number, t: T
   if (!rule.from.includes(row.status)) {
     await audit(user, `workflow.${t}`, kind, id, "denied", { reason: "wrong_status", status: row.status });
     return { ok: false, error: `Из статуса «${STATUS_LABEL[row.status]}» это действие недоступно` };
+  }
+  if (SELF_BLOCKED.includes(t) && row.created_by === user.id) {
+    await audit(user, `workflow.${t}`, kind, id, "denied", { reason: "own_material" });
+    return { ok: false, error: "Свой материал одобряет и публикует другой сотрудник" };
   }
   if (t === "publish" && kind === "document" && row.publish_status !== "public") {
     await audit(user, `workflow.${t}`, kind, id, "denied", { reason: "not_public", publish_status: row.publish_status });

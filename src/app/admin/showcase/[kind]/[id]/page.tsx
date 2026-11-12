@@ -21,10 +21,10 @@ export default async function EditShowcase({ params, searchParams }: { params: P
   const id = Number(idS);
   const { e, m, info } = await searchParams;
   const isCol = kind === "collection";
-  const row = (await q<{ id: number; slug: string; title: { ru: string }; summary: { ru?: string } | null; editorial: { ru?: string } | null; status: string; author: string | null; approver: string | null }>(
+  const row = (await q<{ id: number; slug: string; title: { ru: string }; summary: { ru?: string } | null; editorial: { ru?: string } | null; status: string; created_by: string | null; author: string | null; approver: string | null }>(
     isCol
-      ? `select c.id, c.slug, c.title, c.summary, c.editorial_note editorial, c.status, a.full_name author, ap.full_name approver from collections c left join users a on a.id = c.created_by left join users ap on ap.id = c.approved_by where c.id = $1`
-      : `select c.id, c.slug, c.title, c.description summary, null::jsonb editorial, c.status, a.full_name author, ap.full_name approver from exhibitions c left join users a on a.id = c.created_by left join users ap on ap.id = c.approved_by where c.id = $1`,
+      ? `select c.id, c.slug, c.title, c.summary, c.editorial_note editorial, c.status, c.created_by, a.full_name author, ap.full_name approver from collections c left join users a on a.id = c.created_by left join users ap on ap.id = c.approved_by where c.id = $1`
+      : `select c.id, c.slug, c.title, c.description summary, null::jsonb editorial, c.status, c.created_by, a.full_name author, ap.full_name approver from exhibitions c left join users a on a.id = c.created_by left join users ap on ap.id = c.approved_by where c.id = $1`,
     [id],
   ))[0];
   if (!row) notFound();
@@ -45,7 +45,7 @@ export default async function EditShowcase({ params, searchParams }: { params: P
     [kind, id],
   );
   const editable = canEditEntity(u, kind);
-  const trans = allowedTransitions(u, row.status, null, kind);
+  const trans = allowedTransitions(u, row.status, null, kind, row.created_by);
   const problems = await publishProblems(kind, id);
 
   return (

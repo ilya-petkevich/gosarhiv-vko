@@ -17,15 +17,15 @@ export default async function EditNews({ params, searchParams }: { params: Promi
   const { e, m } = await searchParams;
   const isNew = id === "new";
   if (!isNew && !/^\d{1,9}$/.test(id)) notFound();
-  const n = isNew ? null : (await q<{ id: number; slug: string; title: { ru: string; kk?: string; en?: string }; summary: { ru?: string } | null; body: { ru?: string } | null; cat: string | null; branch_id: number | null; status: string }>(
-    `select n.id, n.slug, n.title, n.summary, n.body, c.slug cat, n.branch_id, n.status from news n left join categories c on c.id = n.category_id where n.id = $1`, [Number(id)],
+  const n = isNew ? null : (await q<{ id: number; slug: string; title: { ru: string; kk?: string; en?: string }; summary: { ru?: string } | null; body: { ru?: string } | null; cat: string | null; branch_id: number | null; status: string; created_by: string | null }>(
+    `select n.id, n.slug, n.title, n.summary, n.body, c.slug cat, n.branch_id, n.status, n.created_by from news n left join categories c on c.id = n.category_id where n.id = $1`, [Number(id)],
   ))[0];
   if (!isNew && !n) notFound();
   const ownOnly = can(u, "branches.edit_own") && !can(u, "branches.edit_all");
   if (n && ownOnly && n.branch_id !== u.branch_id) redirect(`/admin/news?e=${encodeURIComponent("Можно открывать только новости своего филиала")}`);
   const cats = await q<{ slug: string; name: { ru: string } }>(`select slug, name from categories where kind = 'news' order by sort`);
   const branches = await q<{ id: number; name: { ru: string } }>(`select id, short_name name from branches order by sort`);
-  const trans = n ? allowedTransitions(u, n.status, null, "news") : [];
+  const trans = n ? allowedTransitions(u, n.status, null, "news", n.created_by) : [];
   const editable = can(u, "news.edit");
   return (
     <div className="adm-stack">

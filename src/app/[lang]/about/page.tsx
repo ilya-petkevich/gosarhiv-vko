@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return { title: t.about, description: t.aboutLead };
 }
 
-const ICONS: Record<string, IconName> = { history: "history", structure: "list", "reading-room": "lamp", compliance: "scale", laws: "doc" };
+const ICONS: Record<string, IconName> = { history: "history", structure: "list", "reading-room": "lamp", compliance: "scale", laws: "doc", activity: "list", publications: "book", symbols: "doc" };
 
 export default async function About({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params;

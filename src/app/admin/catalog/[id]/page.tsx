@@ -33,7 +33,7 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
     await q<{
       id: number; uid: string; title: { ru: string; kk?: string; en?: string }; description: { ru?: string } | null; cipher: string | null; date_text: string | null;
       year_from: number | null; year_to: number | null; date_uncertain: boolean; doc_type: string; place: string | null; publish_status: string; status: string;
-      version: number; fund_number: string; author: string | null; approver: string | null;
+      version: number; fund_number: string; author: string | null; approver: string | null; created_by: string | null;
     }>(
       `select d.*, f.fund_number, a.full_name as author, ap.full_name as approver from documents d join funds f on f.id = d.fund_id
        left join users a on a.id = d.created_by left join users ap on ap.id = d.approved_by where d.id = $1`,
@@ -53,7 +53,7 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
     [doc.id],
   );
   const canEdit = can(u, "catalog.edit", "content.edit");
-  const trans = allowedTransitions(u, doc.status, doc.publish_status);
+  const trans = allowedTransitions(u, doc.status, doc.publish_status, "document", doc.created_by);
   const publishBlocked = doc.status === "approved" && can(u, "content.publish") && doc.publish_status !== "public";
 
   return (
