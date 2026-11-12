@@ -28,23 +28,23 @@
   color-scheme: light;
 }
 
-/* тёмная тема «Сумерки» (Figma, лист 00e, T3): не чёрный фон, текст цвета бумаги ~12:1, бордо — приглушённой полосой и светлыми кнопками */
+/* тёмная тема: мягкий графит (не чёрный), текст цвета бумаги ~13:1 и интерлиньяж 1.65, бордовая полоса — как в светлой, чуть приглушённая */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #2B2D31; --alt: #313338; --surface: #35383D; --ink: #F0EFEC; --muted: #C2BFB9; --line: #4A4D53;
-    --accent: #EDB3BB; --accent-ink: #2A0E13; --accent-soft: #4B3237;
-    --brand: #EDB3BB; --brand-ink: #2A0E13; --brand-soft: #4B3237; --band: #4A3431;
-    --ochre: #E8C27A; --ochre-soft: #3D3A32; --green: #9AD3A4; --green-soft: #2E3B32;
-    --top: #232528; --top-ink: #CFCCC6; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.25), 0 6px 20px rgba(0,0,0,.18);
+    --bg: #1C1E21; --alt: #222529; --surface: #26292D; --ink: #E9E6E1; --muted: #B9B4AD; --line: #3A3E43;
+    --accent: #EBA48F; --accent-ink: #24120D; --accent-soft: #422822;
+    --brand: #EBA48F; --brand-ink: #24120D; --brand-soft: #422822; --band: #7A3428;
+    --ochre: #E6BE73; --ochre-soft: #332D22; --green: #95CFA0; --green-soft: #22342A;
+    --top: #16181A; --top-ink: #CFCAC3; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.25), 0 6px 20px rgba(0,0,0,.18);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #2B2D31; --alt: #313338; --surface: #35383D; --ink: #F0EFEC; --muted: #C2BFB9; --line: #4A4D53;
-  --accent: #EDB3BB; --accent-ink: #2A0E13; --accent-soft: #4B3237;
-  --brand: #EDB3BB; --brand-ink: #2A0E13; --brand-soft: #4B3237; --band: #4A3431;
-  --ochre: #E8C27A; --ochre-soft: #3D3A32; --green: #9AD3A4; --green-soft: #2E3B32;
-  --top: #232528; --top-ink: #CFCCC6; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.25), 0 6px 20px rgba(0,0,0,.18);
+  --bg: #1C1E21; --alt: #222529; --surface: #26292D; --ink: #E9E6E1; --muted: #B9B4AD; --line: #3A3E43;
+  --accent: #EBA48F; --accent-ink: #24120D; --accent-soft: #422822;
+  --brand: #EBA48F; --brand-ink: #24120D; --brand-soft: #422822; --band: #7A3428;
+  --ochre: #E6BE73; --ochre-soft: #332D22; --green: #95CFA0; --green-soft: #22342A;
+  --top: #16181A; --top-ink: #CFCAC3; --focus: #8AB4FF; --shadow: 0 1px 2px rgba(0,0,0,.25), 0 6px 20px rgba(0,0,0,.18);
   color-scheme: dark;
 }
 
@@ -655,6 +655,11 @@ button.chip { cursor: pointer; font: inherit; font-size: 14px; }
 .kn-look .kn-eyes { animation: kn-look 6s ease-in-out infinite; }
 .kn-sway .kn-bm { transform-origin: 74px 80px; animation: kn-wag 3s ease-in-out infinite; }
 .kn-sway .kn-ball { animation: kn-bob 3s ease-in-out infinite; }
+/* время от времени широко улыбается */
+@keyframes kn-smile-on { 0%, 52%, 100% { opacity: 0; } 58%, 86% { opacity: 1; } }
+@keyframes kn-smile-off { 0%, 52%, 100% { opacity: 1; } 58%, 86% { opacity: 0; } }
+.kn .kn-smile { opacity: 0; animation: kn-smile-on 5s ease-in-out infinite; }
+.kn .kn-mouth { animation: kn-smile-off 5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
@@ -690,3 +695,5 @@ button.chip { cursor: pointer; font: inherit; font-size: 14px; }
 /* облачко Ахмета в тёмной теме не слепит */
 @media (prefers-color-scheme: dark) and (min-width: 641px) { :root:not([data-theme="light"]) .bubble { background: var(--surface); color: var(--ink); } }
 @media (min-width: 641px) { :root[data-theme="dark"] .bubble { background: var(--surface); color: var(--ink); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { line-height: 1.65; } }
+:root[data-theme="dark"] body { line-height: 1.65; }

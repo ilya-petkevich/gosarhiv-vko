@@ -22,7 +22,8 @@ function Eyes({ mood }: { mood: Mood }) {
 
 export function Kniga({ size = 120, mood = "hello", title, anim }: { size?: number; mood?: Mood; title?: string; anim?: KnAnim }) {
   const sw = size > 40 ? 3 : 4.5;
-  const mouth = mood === "sad" ? "M55 72q5-3 10 0" : mood === "think" ? "M56 71h8" : "M54 70q6 4 12 0";
+  // «думает» — тоже с лёгкой улыбкой, чтобы не казался грустным
+  const mouth = mood === "sad" ? "M56 71h8" : mood === "think" ? "M55 70q5 3 10 0" : "M54 70q6 4 12 0";
   return (
     <svg
       className={anim ? `kn kn-${anim}` : "kn"}
@@ -51,7 +52,8 @@ export function Kniga({ size = 120, mood = "hello", title, anim }: { size?: numb
         <g className="kn-eyes">
           <Eyes mood={mood} />
         </g>
-        <path d={mouth} />
+        <path className={anim && mood !== "sad" ? "kn-mouth" : undefined} d={mouth} />
+        {anim && mood !== "sad" ? <path className="kn-smile" d="M52 68q8 8 16 0" /> : null}
         <path className="kn-bm" d="M70 80v13l4-3 4 3V79" />
       </g>
     </svg>
