@@ -258,20 +258,16 @@ h3 { font-size: 19px; line-height: 1.3; font-weight: 600; }
 .branch-funds { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .branch-funds .acts { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .branch-funds ul { padding-left: 18px; }
-.footer .official { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 36px; }
-.footer .official a { display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; min-height: 64px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; opacity: 1; transition: border-color .2s, background-color .2s; }
-.footer .official a:hover { text-decoration: none; border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.05); }
-.footer .official b { font-size: 14px; line-height: 1.3; }
-.footer .official span { font-size: 12px; opacity: .7; }
-.footer .official .off-logo, .footer .official .off-sym { height: 52px; margin-bottom: 4px; opacity: 1; box-shadow: none; }
-.footer .official .off-logo img { max-height: 36px; }
-.footer .official .off-sym img { height: 34px; }
 .symbols { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-end; margin: 20px 0 8px; }
 .symbols figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .symbols img { height: 150px; width: auto; box-shadow: 0 0 0 1px var(--line); }
 .symbols figure:last-child img { box-shadow: none; }
 .symbols figcaption { font-size: 14px; color: var(--muted); max-width: 300px; }
-@media (max-width: 640px) { .symbols img { height: 110px; } .footer .official { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .symbols img { height: 110px; } }
+.footer .official { margin-top: 36px; }
+.footer .official > b { display: block; margin-bottom: 12px; font-size: 15px; }
+.footer .official ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.footer .official a { font-size: 15px; }
 .footer .bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.14); font-size: 13px; opacity: .75; }
 
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: 10px; background: var(--ochre-soft); color: var(--ink); font-size: 14px; }

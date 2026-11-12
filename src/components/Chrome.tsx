@@ -138,20 +138,13 @@ export function Footer({ lang }: { lang: Lang }) {
           </div>
         </div>
         <nav className="official" aria-label={d.officialTitle}>
-          <Link className="sym" href={L("about/symbols")}>
-            <span className="off-sym">
-              <img src="/img/kz-emblem-20261112.svg" alt="" width={40} height={40} />
-              <img src="/img/kz-flag-20261112.svg" alt="" width={60} height={30} />
-            </span>
-            <b>{d.symTitle}</b>
-          </Link>
-          {OFFICIAL.map((o) => (
-            <a key={o.href} className="off" href={o.href} rel="noopener" target="_blank">
-              <span className="off-logo"><img src={o.logo} alt="" loading="lazy" /></span>
-              <b>{o.name[lang]}</b>
-              <span>{o.host}</span>
-            </a>
-          ))}
+          <b>{d.officialTitle}</b>
+          <ul>
+            <li><Link href={L("about/symbols")}>{d.symTitle}</Link></li>
+            {OFFICIAL.map((o) => (
+              <li key={o.href}><a href={o.href} rel="noopener" target="_blank">{o.name[lang]} ↗</a></li>
+            ))}
+          </ul>
         </nav>
         <div className="bottom">
           <span>© 2010–{new Date().getFullYear()} {d.orgShort}. {d.footerNote}</span>

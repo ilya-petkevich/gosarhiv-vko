@@ -67,9 +67,24 @@ export function classify(text: string): "restricted" | "pension" | null {
 const SITE_INFO = `Сведения о Государственном архиве ВКО (из материалов архива):
 - Адрес: г. Усть-Каменогорск, ул. Бейбітшілік, 26/1 (Головкова, 26/1). Приёмная: 8 (7232) 25-59-76, arhiv-ukg@yandex.kz.
 - Режим: пн–пт 8:00–17:00; читальный зал пн–пт 9:00–16:00.
-- 13 филиалов по области; адреса и телефоны — раздел «Филиалы» (/branches).
+- 13 филиалов по области; их адреса, телефоны и режим — в списке филиалов ниже и в разделе «Филиалы» (/branches).
 - Сайт информационный: заявления, архивные запросы и оплата на сайте не принимаются. Архивную справку (о стаже, заработной плате, подтверждение фактов) запрашивают на eGov.kz или через e-Otinish; порядок — раздел «Государственная услуга» (/services/gov). Платные услуги и прейскурант — /services/paid.
 - Электронный каталог (/catalog): фонды архива (перечень) и демонстрационные записи документов.`;
+
+// Адреса филиалов — из базы (раздел «Филиалы»), чтобы Ахмет отвечал «где архив в Риддере» тем же, что опубликовано на сайте.
+type BranchRow = { name: { ru: string }; address: { ru: string }; phone: string | null; email: string | null; hours: { ru: string } | null; is_main: boolean };
+let branchCache: { at: number; text: string } | null = null;
+async function branchInfo(): Promise<string> {
+  if (branchCache && Date.now() - branchCache.at < 10 * 60_000) return branchCache.text;
+  const rows = await q<BranchRow>(`select name, address, phone, email, hours, is_main from branches where is_visible order by is_main desc, id`).catch(() => []);
+  if (!rows.length) return "";
+  const lines = rows.map((b) =>
+    `- ${b.name.ru}: ${b.address.ru}` + (b.phone ? `; тел. ${b.phone}` : "") + (b.email ? `; ${b.email}` : "") + (b.hours?.ru ? `; ${b.hours.ru}` : ""),
+  );
+  const text = `Головной архив и филиалы (адреса опубликованы в разделе «Филиалы», /branches):\n${lines.join("\n")}`;
+  branchCache = { at: Date.now(), text };
+  return text;
+}
 
 // ---------- Поиск по каталогу ----------
 
@@ -268,7 +283,7 @@ const SYSTEM = `Ты — Ахмет, помощник на сайте Госуд
 Ты помогаешь посетителям найти открытые архивные материалы и разобраться, куда обратиться.
 
 Правила, которые нельзя нарушать:
-1. Отвечай только по результатам инструмента search_catalog и по справочным сведениям ниже. Ничего не добавляй от себя о составе фондов, датах и содержании документов.
+1. Отвечай только по результатам инструмента search_catalog и по справочным сведениям ниже (в них есть адреса и телефоны головного архива и всех филиалов — на вопрос «где архив в …» называй адрес оттуда, поиск по каталогу для этого не нужен). Ничего не добавляй от себя о составе фондов, датах и содержании документов.
 2. Ссылайся на найденные записи только метками из результатов поиска: [D1], [F2] и т. п. Не придумывай шифры, номера фондов, описей, дел, адреса и ссылки. Если в результатах нет подходящего — прямо скажи, что в открытых материалах этого нет.
 3. Ты не принимаешь заявления, запросы и заказы и не оформляешь справки. Для справок и запросов направляй на eGov.kz или e-Otinish (раздел сайта «Государственная услуга»).
 4. Не обсуждай людей по именам, личные дела и закрытые сведения: скажи, что они не публикуются, и укажи порядок официального запроса.
@@ -365,9 +380,11 @@ async function modelAnswer(question: string, lang: Lang): Promise<Answer> {
     };
   };
 
+  const branches = await branchInfo();
+  const system = branches ? `${SYSTEM}\n\n${branches}` : SYSTEM;
   const text = PROVIDER === "openrouter"
-    ? await openrouterLoop(question, parseInput, runSearch)
-    : await anthropicLoop(question, parseInput, runSearch);
+    ? await openrouterLoop(system, question, parseInput, runSearch)
+    : await anthropicLoop(system, question, parseInput, runSearch);
   return finish(text, refs, known, lang);
 }
 
@@ -379,12 +396,13 @@ type ORMessage =
   | { role: "tool"; tool_call_id: string; content: string };
 
 async function openrouterLoop(
+  system: string,
   question: string,
   parseInput: (i: unknown) => { query: string } | null,
   runSearch: (i: never) => Promise<unknown>,
 ): Promise<string> {
   const tool = { type: "function", function: { name: TOOL.name, description: TOOL.description, parameters: TOOL.input_schema } };
-  const messages: ORMessage[] = [{ role: "system", content: SYSTEM }, { role: "user", content: question }];
+  const messages: ORMessage[] = [{ role: "system", content: system }, { role: "user", content: question }];
   const usage = { input: 0, output: 0, cost: 0 };
   for (let turn = 0; turn < 4; turn++) {
     const ctrl = new AbortController();
@@ -442,6 +460,7 @@ async function openrouterLoop(
 // ---------- Anthropic ----------
 
 async function anthropicLoop(
+  system: string,
   question: string,
   parseInput: (i: unknown) => { query: string } | null,
   runSearch: (i: never) => Promise<unknown>,
@@ -454,7 +473,7 @@ async function anthropicLoop(
     const res = await client!.beta.messages.create({
       model: MODEL,
       max_tokens: 4000,
-      system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
       tools: [TOOL],
       tool_choice: turn === 3 ? { type: "none" } : { type: "auto" },
       messages,
