@@ -41,6 +41,10 @@ type DocInput = {
   date_uncertain: boolean;
   doc_type: string;
   place: string | null;
+  doc_author: string | null;
+  language: string | null;
+  sheets: number | null;
+  history_note: { ru: string } | null;
   publish_status: string;
 };
 
@@ -71,6 +75,10 @@ function readDoc(f: FormData): { ok: true; v: DocInput } | { ok: false; error: s
       date_uncertain: f.get("date_uncertain") === "on",
       doc_type: type,
       place: s(f, "place", 200) || null,
+      doc_author: s(f, "doc_author", 300) || null,
+      language: s(f, "language", 60) || null,
+      sheets: /^\d{1,5}$/.test(s(f, "sheets", 5)) ? Number(s(f, "sheets", 5)) : null,
+      history_note: s(f, "history_ru", 4000) ? { ru: s(f, "history_ru", 4000) } : null,
       publish_status: pub,
     },
   };
@@ -91,9 +99,9 @@ export async function createDocument(f: FormData) {
   const row = (
     await q<{ id: number }>(
       `insert into documents(fund_id, branch_id, cipher, title, description, doc_type, date_text, year_from, year_to, date_uncertain, place,
-                             publish_status, status, created_by, updated_by, provenance, is_demo)
-       values ($1, (select branch_id from funds where id = $1), $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$12,'Создано в админке',true) returning id`,
-      [fund, v.cipher, v.title, v.description, v.doc_type, v.date_text, v.year_from, v.year_to, v.date_uncertain, v.place, v.publish_status, u.id],
+                             publish_status, status, created_by, updated_by, provenance, is_demo, author, language, sheets, history_note)
+       values ($1, (select branch_id from funds where id = $1), $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$12,'Создано в админке',true,$13,$14,$15,$16) returning id`,
+      [fund, v.cipher, v.title, v.description, v.doc_type, v.date_text, v.year_from, v.year_to, v.date_uncertain, v.place, v.publish_status, u.id, v.doc_author, v.language, v.sheets, v.history_note],
     )
   )[0];
   await q(`insert into content_versions(entity_type, entity_id, version, data, author_id) values ('document',$1,1,$2,$3)`, [row.id, v, u.id]);
@@ -121,9 +129,10 @@ export async function saveDocument(f: FormData) {
   await q(
     `update documents set cipher=$2, title=$3, description=$4, doc_type=$5, date_text=$6, year_from=$7, year_to=$8, date_uncertain=$9, place=$10,
        publish_status=$11, status=$12, updated_by=$13, updated_at=now(), version = version + 1,
+       author=$14, language=$15, sheets=$16, history_note=$17,
        published_at = case when $12 = 'published' then published_at else null end
      where id = $1`,
-    [id, v.cipher, v.title, v.description, v.doc_type, v.date_text, v.year_from, v.year_to, v.date_uncertain, v.place, v.publish_status, finalStatus, u.id],
+    [id, v.cipher, v.title, v.description, v.doc_type, v.date_text, v.year_from, v.year_to, v.date_uncertain, v.place, v.publish_status, finalStatus, u.id, v.doc_author, v.language, v.sheets, v.history_note],
   );
   await q(`insert into content_versions(entity_type, entity_id, version, data, author_id) values ('document',$1,$2,$3,$4)`, [id, doc.version + 1, v, u.id]);
   if (finalStatus !== doc.status) {
@@ -505,6 +514,8 @@ export async function saveNews(f: FormData) {
   const cat = s(f, "category", 30);
   const branchReq = Number(s(f, "branch_id", 6)) || null;
   const branch = await newsBranch(u, branchReq);
+  const video = s(f, "video_url", 300);
+  if (video && !/^https:\/\/\S+$/.test(video)) back("Ссылка на видео должна начинаться с https://");
   const values = [
     { ru: title, ...(s(f, "title_kk", 300) ? { kk: s(f, "title_kk", 300) } : {}), ...(s(f, "title_en", 300) ? { en: s(f, "title_en", 300) } : {}) },
     s(f, "summary_ru", 600) ? { ru: s(f, "summary_ru", 600) } : null,
@@ -515,9 +526,9 @@ export async function saveNews(f: FormData) {
   if (!id) {
     const slug = `${slugify(title)}-${Date.now().toString(36).slice(-4)}`;
     const row = (await q<{ id: number }>(
-      `insert into news(slug, title, summary, body, category_id, branch_id, status, created_by)
-       values ($1,$2,$3,$4,(select id from categories where kind = 'news' and slug = $5),$6,'draft',$7) returning id`,
-      [slug, ...values, u.id],
+      `insert into news(slug, title, summary, body, category_id, branch_id, status, created_by, video_url)
+       values ($1,$2,$3,$4,(select id from categories where kind = 'news' and slug = $5),$6,'draft',$7,$8) returning id`,
+      [slug, ...values, u.id, video || null],
     ))[0];
     await audit(u, "news.create", "news", row.id, "ok");
     redirect(`/admin/news/${row.id}?m=created`);
@@ -530,11 +541,11 @@ export async function saveNews(f: FormData) {
   }
   await q(
     `update news set title = $2, summary = $3, body = $4, category_id = (select id from categories where kind = 'news' and slug = $5), branch_id = $6,
-       updated_at = now(), version = version + 1,
+       video_url = $8, updated_at = now(), version = version + 1,
        status = case when status = 'published' and not $7 then 'review' else status end,
        published_at = case when status = 'published' and not $7 then null else published_at end
      where id = $1`,
-    [id, ...values, can(u, "content.publish")],
+    [id, ...values, can(u, "content.publish"), video || null],
   );
   await audit(u, "news.update", "news", id, "ok");
   redirect(`/admin/news/${id}?m=saved`);
@@ -576,4 +587,21 @@ export async function savePage(f: FormData) {
   ]);
   await audit(u, "page.update", "page", id, "ok", { version: cur.version + 1 });
   redirect(`/admin/pages/${id}?m=saved`);
+}
+
+// Рекомендации ИИ по сводной статистике (ТЗ 5.8 Д): одна обращение к модели по нажатию, результат сохраняется
+export async function analyticsAdvice() {
+  const u = await need();
+  if (!can(u, "analytics.view")) redirect("/admin");
+  const { siteStats } = await import("@/lib/siteStats");
+  const { adviseSite } = await import("@/lib/akhmet");
+  const st = await siteStats();
+  const text = await adviseSite(st.brief);
+  if (!text) redirect(`/admin/analytics?e=${encodeURIComponent("Модель сейчас недоступна — используйте рекомендации по правилам ниже")}`);
+  await q(
+    `insert into site_settings(key, value) values ('analytics_advice', $1::text::jsonb) on conflict (key) do update set value = excluded.value`,
+    [JSON.stringify({ text, at: new Date().toISOString(), by: u.login })],
+  );
+  await audit(u, "analytics.advice", null, null, "ok");
+  redirect("/admin/analytics?m=done");
 }

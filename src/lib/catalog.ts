@@ -98,6 +98,12 @@ export type Filters = {
   fund?: string;
   branch?: string;
   copy?: boolean;
+  // ТЗ 5.3: номер описи и дела, автор или организация, населённый пункт, тематика
+  inv?: string;
+  caseNo?: string;
+  author?: string;
+  place?: string;
+  topic?: string;
   // достаточно совпадения любого из слов (для помощника, когда по всем словам почти ничего нет)
   anyWord?: boolean;
   sort?: "relevance" | "old" | "new";
@@ -129,6 +135,12 @@ function buildDocWhere(f: Filters, p: Parsed, params: unknown[], useText: boolea
   if (docType && (DOC_TYPES as readonly string[]).includes(docType)) where.push(`d.doc_type = ${add(docType)}`);
   if (f.fund) where.push(`f.fund_number = ${add(f.fund)}`);
   if (f.branch) where.push(`b.slug = ${add(f.branch)}`);
+  const like = (v: string) => add(`%${v.replace(/[\\%_]/g, (m) => "\\" + m)}%`);
+  if (f.inv) where.push(`exists (select 1 from cases c_f join inventories i_f on i_f.id = c_f.inventory_id where c_f.id = d.case_id and i_f.number = ${add(f.inv)})`);
+  if (f.caseNo) where.push(`exists (select 1 from cases c_f where c_f.id = d.case_id and c_f.number = ${add(f.caseNo)})`);
+  if (f.author) where.push(`d.author ilike ${like(f.author)}`);
+  if (f.place) where.push(`d.place ilike ${like(f.place)}`);
+  if (f.topic) where.push(`exists (select 1 from document_tags dt join tags tg on tg.id = dt.tag_id where dt.document_id = d.id and tg.slug = ${add(f.topic)})`);
   if (f.copy) where.push(`exists (select 1 from document_files x join digital_files df_file on df_file.id = x.file_id where x.document_id = d.id and ${FILE_VISIBLE})`);
   return { where: where.join(" and "), tsq };
 }
@@ -230,7 +242,7 @@ export async function searchFunds(f: Filters & { kind?: string }) {
 export type DocCard = {
   id: number; uid: string; title: L10n; description: L10n | null; cipher: string | null; doc_type: DocType;
   date_text: string | null; date_uncertain: boolean; year_from: number | null; year_to: number | null; place: string | null;
-  author: string | null; provenance: string | null; is_demo: boolean; i18n_status: Record<string, string>; published_at: string | null;
+  author: string | null; provenance: string | null; language: string | null; sheets: number | null; history_note: L10n | null; is_demo: boolean; i18n_status: Record<string, string>; published_at: string | null;
   fund_id: number; fund_number: string; fund_title: L10n; inv_number: string | null; inv_title: L10n | null;
   case_number: string | null; case_title: L10n | null; branch_slug: string | null; branch_name: L10n | null; branch_address: L10n | null;
 };
@@ -239,7 +251,7 @@ export async function getDocument(uid: string) {
   if (!/^[0-9a-f-]{36}$/i.test(uid)) return null;
   const rows = await q<DocCard>(
     `select d.id, d.uid, d.title, d.description, d.cipher, d.doc_type, d.date_text, d.date_uncertain, d.year_from, d.year_to, d.place,
-            d.author, d.provenance, d.is_demo, d.i18n_status, d.published_at,
+            d.author, d.provenance, d.language, coalesce(d.sheets, c.sheets) as sheets, d.history_note, d.is_demo, d.i18n_status, d.published_at,
             f.id as fund_id, f.fund_number, f.title as fund_title, i.number as inv_number, i.title as inv_title,
             c.number as case_number, c.title as case_title, b.slug as branch_slug, b.name as branch_name, b.address as branch_address
      from documents d join funds f on f.id = d.fund_id
@@ -331,5 +343,9 @@ export async function catalogFacets() {
   const allBranches = await q<{ slug: string; short_name: L10n; name: L10n; description: L10n | null }>(
     `select b.slug, b.short_name, b.name, b.description from branches b where b.is_visible order by b.sort`,
   );
-  return { funds, branches, allBranches };
+  const topics = await q<{ slug: string; name: L10n }>(
+    `select tg.slug, tg.name from tags tg where exists (select 1 from document_tags dt join documents d on d.id = dt.document_id join funds f on f.id = d.fund_id
+       where dt.tag_id = tg.id and ${DOC_VISIBLE} and ${FUND_VISIBLE}) order by tg.id`,
+  );
+  return { funds, branches, allBranches, topics };
 }

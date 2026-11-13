@@ -32,10 +32,10 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
   const doc = (
     await q<{
       id: number; uid: string; title: { ru: string; kk?: string; en?: string }; description: { ru?: string } | null; cipher: string | null; date_text: string | null;
-      year_from: number | null; year_to: number | null; date_uncertain: boolean; doc_type: string; place: string | null; publish_status: string; status: string;
+      year_from: number | null; year_to: number | null; date_uncertain: boolean; doc_type: string; place: string | null; publish_status: string; status: string; doc_author: string | null; language: string | null; sheets: number | null; history_note: { ru?: string } | null;
       version: number; fund_number: string; author: string | null; approver: string | null; created_by: string | null;
     }>(
-      `select d.*, f.fund_number, a.full_name as author, ap.full_name as approver from documents d join funds f on f.id = d.fund_id
+      `select d.*, d.author as doc_author, f.fund_number, a.full_name as author, ap.full_name as approver from documents d join funds f on f.id = d.fund_id
        left join users a on a.id = d.created_by left join users ap on ap.id = d.approved_by where d.id = $1`,
       [Number(id)],
     )
@@ -105,8 +105,8 @@ export default async function EditDoc({ params, searchParams }: { params: Promis
           {can(u, "files.upload") ? (
             <form action={uploadFiles} className="adm-form upload">
               <input type="hidden" name="doc_id" value={doc.id} />
-              <label className="fld"><span className="label">Добавить файлы (JPEG, PNG, WebP, TIFF, PDF; до {MAX_FILE_MB} МБ каждый, до 20 за раз)</span>
-                <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp,image/tiff,application/pdf" />
+              <label className="fld"><span className="label">Добавить файлы (JPEG, PNG, WebP, TIFF, PDF, MP4, WebM, MP3; до {MAX_FILE_MB} МБ каждый, до 20 за раз)</span>
+                <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp,image/tiff,application/pdf,video/mp4,video/webm,audio/mpeg" />
               </label>
               <div><button className="btn sec" type="submit">Загрузить</button></div>
               <p className="small muted">Новые файлы закрыты, пока вы не откроете доступ. Мастер-копия хранится без изменений; для изображений на сайте показывается облегчённая копия.</p>

@@ -132,6 +132,7 @@ export function Footer({ lang }: { lang: Lang }) {
             <Link href={L("about/laws")}>{d.tiles.laws}</Link>
             <Link href={L("anticorruption")}>{d.nav.anticorruption}</Link>
             <Link href={L("branches")}>{d.nav.branches}</Link>
+            <Link href={L("help")}>{d.helpPage}</Link>
             <Link href={L("faq")}>{d.faq}</Link>
           </div>
           <div className="col">

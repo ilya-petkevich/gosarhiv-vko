@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { dict, isLang, type Lang } from "@/i18n/dict";
 import { Kniga } from "@/components/Kniga";
+import { Beacon } from "@/components/Beacon";
 
 export default async function NotFound() {
   const c = (await cookies()).get("lang")?.value;
@@ -11,6 +12,7 @@ export default async function NotFound() {
   const d = dict(lang);
   return (
     <div className="wrap" style={{ padding: "72px 0", display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
+      <Beacon event="not_found" />
       <Kniga size={120} mood="think" />
       <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}>
         <h1 style={{ fontSize: 32 }}>{d.notFoundTitle}</h1>

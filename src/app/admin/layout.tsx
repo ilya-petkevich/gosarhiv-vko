@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/import", label: "Импорт и выгрузка", show: can(u, "catalog.import") },
         { href: "/admin/branches", label: "Филиалы", show: can(u, "branches.edit_all", "branches.edit_own") },
         { href: "/admin/users", label: "Пользователи и роли", show: can(u, "users.manage") },
+        { href: "/admin/analytics", label: "Аналитика", show: can(u, "analytics.view") },
         { href: "/admin/audit", label: "Журнал действий", show: can(u, "audit.view") },
       ].filter((x) => x.show)
     : [];

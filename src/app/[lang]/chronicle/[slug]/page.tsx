@@ -8,7 +8,7 @@ import { Crumbs } from "@/components/CatalogParts";
 import { Icon } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
-type P = { params: Promise<{ lang: string; slug: string }> };
+type P = { params: Promise<{ lang: string; slug: string }>; searchParams: Promise<{ view?: string }> };
 
 export async function generateMetadata({ params }: P): Promise<Metadata> {
   const { lang, slug } = await params;
@@ -18,8 +18,9 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
   return { title: pick(c.title, lang).text, description: pick(c.summary, lang).text.slice(0, 160), robots: c.is_demo ? { index: false } : undefined };
 }
 
-export default async function Collection({ params }: P) {
+export default async function Collection({ params, searchParams }: P) {
   const { lang: l, slug } = await params;
+  const gallery = (await searchParams).view === "gallery";
   if (!isLang(l)) notFound();
   const lang = l as Lang;
   const t = showcaseText(lang);
@@ -38,7 +39,35 @@ export default async function Collection({ params }: P) {
           <aside className="notice" lang="ru"><Icon name="help" size={20} /> <span><b>{t.editorial}.</b> {pick(c.editorial_note, lang).text.replace(/^Пояснение редакции:\s*/, "").replace(/^./, (x) => x.toUpperCase())}</span></aside>
         ) : null}
       </div>
-      <h2 className="h3" style={{ margin: "32px 0 16px" }}>{t.inCollection}</h2>
+      <div className="section-head" style={{ margin: "32px 0 16px" }}>
+        <h2 className="h3">{t.inCollection}</h2>
+        <nav className="seg" aria-label={t.inCollection}>
+          <Link href={`/${lang}/chronicle/${slug}`} aria-current={!gallery ? "true" : undefined}>{t.viewList}</Link>
+          <Link href={`/${lang}/chronicle/${slug}?view=gallery`} aria-current={gallery ? "true" : undefined}>{t.viewGallery}</Link>
+        </nav>
+      </div>
+      {gallery ? (
+        <div className="gallery-grid" lang="ru">
+          {c.items.map((it, k) =>
+            it.kind === "document" ? (
+              <Link key={k} href={`/${lang}/catalog/doc/${it.uid}`} className="card g-item">
+                <span className="g-img">
+                  {it.file ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/api/files/${it.file}`} alt={pick(it.title, lang).text} loading="lazy" />
+                  ) : <Icon name={it.doc_type === "video" ? "film" : "doc"} size={36} />}
+                </span>
+                <span className="g-cap"><b>{pick(it.title, lang).text}</b><span className="small muted">{it.date_text} · {it.cipher ?? it.source}</span></span>
+              </Link>
+            ) : (
+              <div key={k} className="card g-item">
+                <span className="g-img ev"><b>{it.year}</b></span>
+                <span className="g-cap"><b>{pick(it.title, lang).text}</b>{it.source ? <span className="small muted">{it.source}</span> : null}</span>
+              </div>
+            ),
+          )}
+        </div>
+      ) : (
       <ol className="col-items" lang="ru">
         {c.items.map((it, k) =>
           it.kind === "document" ? (
@@ -69,6 +98,7 @@ export default async function Collection({ params }: P) {
           ),
         )}
       </ol>
+      )}
       <p style={{ marginTop: 32 }}><Link className="more" href={`/${lang}/chronicle#timeline`}>{t.toTimeline} <Icon name="arrow" size={20} /></Link></p>
     </div>
   );

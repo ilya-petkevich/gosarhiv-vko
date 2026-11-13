@@ -1,3 +1,4 @@
+import { cleanQuery, track } from "@/lib/analytics";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -39,6 +40,11 @@ export default async function Catalog({ params, searchParams }: { params: Promis
     fund: one(sp.fund) || undefined,
     branch: one(sp.branch) || undefined,
     copy: one(sp.copy) === "1",
+    inv: one(sp.inv).slice(0, 20) || undefined,
+    caseNo: one(sp.case).slice(0, 20) || undefined,
+    author: one(sp.author).slice(0, 100) || undefined,
+    place: one(sp.place).slice(0, 100) || undefined,
+    topic: one(sp.topic).slice(0, 40) || undefined,
     kind: one(sp.kind) === "personal" ? "personal" : undefined,
     sort: (["old", "new"].includes(one(sp.sort)) ? one(sp.sort) : "relevance") as Filters["sort"],
     page: Math.min(500, Number(one(sp.page)) || 1),
@@ -49,6 +55,11 @@ export default async function Catalog({ params, searchParams }: { params: Promis
     searchFunds(tab === "funds" ? f : { ...f, page: 1 }),
     catalogFacets(),
   ]);
+  // аналитика: что ищут и что не находят (без персональных данных)
+  if (f.q && (f.page ?? 1) === 1) {
+    const cq = cleanQuery(f.q);
+    if (cq) track(docs.total + funds.total ? "search" : "search_empty", "/catalog", lang, cq);
+  }
   const branchInfo = tab === "funds" && f.branch ? facets.allBranches.find((x) => x.slug === f.branch) ?? null : null;
   const parsed = docs.parsed;
 
@@ -58,6 +69,7 @@ export default async function Catalog({ params, searchParams }: { params: Promis
     const cur: Record<string, string | undefined> = {
       q: f.q || undefined, tab: tab === "funds" ? "funds" : undefined, doc_type: f.docType || undefined,
       from: f.from?.toString(), to: f.to?.toString(), fund: f.fund, branch: f.branch, copy: f.copy ? "1" : undefined,
+      inv: f.inv, case: f.caseNo, author: f.author, place: f.place, topic: f.topic,
       kind: f.kind, sort: f.sort !== "relevance" ? f.sort : undefined,
     };
     for (const [k, v] of Object.entries({ ...cur, ...over })) if (v !== undefined && v !== "") u.set(k, String(v));
@@ -74,6 +86,14 @@ export default async function Catalog({ params, searchParams }: { params: Promis
   if (f.branch) {
     const b = facets.allBranches.find((x) => x.slug === f.branch);
     active.push({ label: b ? pick(b.short_name, lang).text : f.branch, href: qs({ branch: undefined, page: undefined }) });
+  }
+  if (f.inv) active.push({ label: `${t.invNo}: ${f.inv}`, href: qs({ inv: undefined, page: undefined }) });
+  if (f.caseNo) active.push({ label: `${t.caseNo}: ${f.caseNo}`, href: qs({ case: undefined, page: undefined }) });
+  if (f.author) active.push({ label: `${t.authorOrg}: ${f.author}`, href: qs({ author: undefined, page: undefined }) });
+  if (f.place) active.push({ label: `${t.placeName}: ${f.place}`, href: qs({ place: undefined, page: undefined }) });
+  if (f.topic) {
+    const tp = facets.topics.find((x) => x.slug === f.topic);
+    active.push({ label: tp ? pick(tp.name, lang).text : f.topic, href: qs({ topic: undefined, page: undefined }) });
   }
   if (f.copy) active.push({ label: t.onlyCopy, href: qs({ copy: undefined, page: undefined }) });
   if (f.kind) active.push({ label: t.onlyPersonal, href: qs({ kind: undefined, page: undefined }) });
@@ -160,6 +180,21 @@ export default async function Catalog({ params, searchParams }: { params: Promis
                     {facets.branches.map((x) => <option key={x.slug} value={x.slug}>{pick(x.short_name, lang).text}</option>)}
                   </select>
                 </label>
+                {facets.topics.length ? (
+                  <label className="fld">
+                    <span className="label">{t.topic}</span>
+                    <select name="topic" defaultValue={f.topic}>
+                      <option value="">{t.anyTopic}</option>
+                      {facets.topics.map((x) => <option key={x.slug} value={x.slug}>{pick(x.name, lang).text}</option>)}
+                    </select>
+                  </label>
+                ) : null}
+                <div className="row2">
+                  <label className="fld"><span className="label">{t.invNo}</span><input name="inv" defaultValue={f.inv} maxLength={20} /></label>
+                  <label className="fld"><span className="label">{t.caseNo}</span><input name="case" defaultValue={f.caseNo} maxLength={20} /></label>
+                </div>
+                <label className="fld"><span className="label">{t.authorOrg}</span><input name="author" defaultValue={f.author} maxLength={100} /></label>
+                <label className="fld"><span className="label">{t.placeName}</span><input name="place" defaultValue={f.place} maxLength={100} /></label>
                 <label className="check"><input type="checkbox" name="copy" value="1" defaultChecked={f.copy} /> {t.onlyCopy}</label>
               </>
             ) : (

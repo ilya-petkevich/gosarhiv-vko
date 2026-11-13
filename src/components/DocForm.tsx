@@ -14,6 +14,10 @@ export type DocValues = {
   date_uncertain?: boolean;
   doc_type?: string;
   place?: string | null;
+  doc_author?: string | null;
+  language?: string | null;
+  sheets?: number | null;
+  history_note?: { ru?: string } | null;
   publish_status?: string;
 };
 
@@ -38,6 +42,12 @@ export function DocFields({ v, disabled }: { v: DocValues; disabled?: boolean })
         <label className="fld"><span className="label">Год по</span><input name="year_to" inputMode="numeric" pattern="\d{4}" defaultValue={v.year_to ?? ""} /></label>
         <label className="fld"><span className="label">Место</span><input name="place" defaultValue={v.place ?? ""} maxLength={200} /></label>
       </div>
+      <div className="grid3">
+        <label className="fld"><span className="label">Автор или организация</span><input name="doc_author" defaultValue={v.doc_author ?? ""} maxLength={300} /></label>
+        <label className="fld"><span className="label">Язык документа</span><input name="language" defaultValue={v.language ?? ""} maxLength={60} placeholder="ru, kk, de…" /></label>
+        <label className="fld"><span className="label">Количество листов</span><input name="sheets" inputMode="numeric" pattern="\d{1,5}" defaultValue={v.sheets ?? ""} /></label>
+      </div>
+      <label className="fld"><span className="label">Историческая справка (рус)</span><textarea name="history_ru" rows={3} defaultValue={v.history_note?.ru} maxLength={4000} /></label>
       <label className="check"><input type="checkbox" name="date_uncertain" defaultChecked={v.date_uncertain} /> Дата приблизительная</label>
       <label className="fld"><span className="label">Доступ к описанию *</span>
         <select name="publish_status" defaultValue={v.publish_status ?? "needs_check"}>{Object.entries(PUBLISH_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>

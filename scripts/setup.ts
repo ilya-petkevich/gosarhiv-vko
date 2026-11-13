@@ -11,6 +11,7 @@ import { BRANCHES, APPROX_COORDS, DIRECTORS, BRANCH_ABOUT } from "../db/seed/bra
 import { DEMO_FUNDS, DEMO_DOCS, demoImage } from "../db/seed/catalog";
 import { DEMO_EXHIBITIONS, DEMO_COLLECTIONS } from "../db/seed/showcase";
 import { EXTRA_PAGES, NEWS_CATEGORIES, DEMO_NEWS } from "../db/seed/pages";
+import { TOPICS, DOC_TOPICS, METRIC_NOTE, PERSONS, EXHIBITION_TOPICS } from "../db/seed/extras";
 import { putFile } from "../src/lib/storage";
 
 async function migrate() {
@@ -90,7 +91,9 @@ async function seed() {
   await seedFunds();
   await seedDemoCatalog();
   await seedChronicle();
+  await seedPersons();
   await seedShowcase();
+  await seedDocExtras();
   await seedPagesAndNews();
 
   await db.query(
@@ -204,6 +207,49 @@ async function seedDemoCatalog() {
 }
 
 // Хронология из календарей памятных дат (scripts/convert/calendar_from_docx.py)
+// ТЗ 5.3: тематики, язык, число листов и историческая справка у демо-записей
+async function seedDocExtras() {
+  const db = await getDb();
+  for (const t of TOPICS) {
+    await db.query(`insert into tags(slug, name) values ($1,$2) on conflict (slug) do update set name = excluded.name`, [t.slug, t.name]);
+  }
+  for (const [key, slugs] of Object.entries(DOC_TOPICS)) {
+    for (const slug of slugs) {
+      await db.query(
+        `insert into document_tags(document_id, tag_id)
+         select d.id, t.id from documents d, tags t where d.uid = md5('demo:' || $1::text)::uuid and t.slug = $2
+         on conflict do nothing`,
+        [key, slug],
+      );
+    }
+  }
+  await db.query(`update documents set language = 'ru' where is_demo and language is null and doc_type in ('document', 'newspaper', 'metric_book', 'map', 'audio', 'video')`);
+  await db.query(
+    `update documents d set sheets = (select count(*) from document_files x where x.document_id = d.id)
+     where d.is_demo and d.sheets is null and d.doc_type in ('document', 'newspaper', 'metric_book', 'map')`,
+  );
+  for (const [i, t] of EXHIBITION_TOPICS.entries()) {
+    await db.query(`insert into categories(kind, slug, name, sort) values ('exhibition',$1,$2,$3) on conflict (kind, slug) do update set name = excluded.name`, [t.slug, t.name, i]);
+    await db.query(
+      `update exhibitions set category_id = (select id from categories where kind = 'exhibition' and slug = $1) where slug = any($2::text[]) and category_id is null`,
+      [t.slug, t.exhibitions],
+    );
+  }
+  await db.query(`update documents set history_note = $1::text::jsonb where is_demo and doc_type = 'metric_book' and history_note is null`, [JSON.stringify(METRIC_NOTE)]);
+}
+
+// Исторические личности (ТЗ 5.6) — по календарям памятных дат архива
+async function seedPersons() {
+  const db = await getDb();
+  for (const [i, p] of PERSONS.entries()) {
+    await db.query(
+      `insert into persons(slug, name, years, biography, sources, status, match, sort) values ($1,$2,$3,$4,$5,'published',$6,$7)
+       on conflict (slug) do update set match = excluded.match, sort = excluded.sort`,
+      [p.slug, p.name, p.years, p.bio, p.source, p.match, i],
+    );
+  }
+}
+
 async function seedChronicle() {
   const db = await getDb();
   const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "seed", "data", "chronicle-events.json"), "utf8")) as {

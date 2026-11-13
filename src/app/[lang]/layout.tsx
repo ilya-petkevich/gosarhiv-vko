@@ -1,3 +1,4 @@
+import { Beacon } from "@/components/Beacon";
 import type { Metadata } from "next";
 import { KnigaGaze } from "@/components/KnigaGaze";
 import { Onest, Literata } from "next/font/google";
@@ -43,6 +44,7 @@ export default async function LangLayout({ children, params }: { children: React
         <main id="main">{children}</main>
         <Footer lang={lang as Lang} />
         <KnigaGaze />
+        <Beacon />
       </body>
     </html>
   );

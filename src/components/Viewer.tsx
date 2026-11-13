@@ -14,6 +14,8 @@ export function Viewer({ files, alt, labels }: { files: { id: number; mime: stri
   const n = files.length;
   const src = `/api/files/${files[i].id}`;
   const isPdf = files[i].mime === "application/pdf";
+  const isVideo = files[i].mime.startsWith("video/");
+  const isAudio = files[i].mime.startsWith("audio/");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -31,6 +33,10 @@ export function Viewer({ files, alt, labels }: { files: { id: number; mime: stri
       <div className={`stage${zoom ? " z" : ""}${isPdf ? " pdf" : ""}`}>
         {isPdf ? (
           <iframe src={src} title={`${alt}. ${labels.sheet.replace("{i}", String(i + 1)).replace("{n}", String(n))}`} />
+        ) : isVideo ? (
+          <video src={src} controls preload="metadata" aria-label={alt} />
+        ) : isAudio ? (
+          <audio src={src} controls preload="metadata" aria-label={alt} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={`${alt}. ${labels.sheet.replace("{i}", String(i + 1)).replace("{n}", String(n))}`} onClick={() => setZoom((z) => !z)} />

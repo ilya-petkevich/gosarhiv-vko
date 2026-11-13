@@ -535,3 +535,38 @@ function finish(raw: string, refs: Map<string, Source>, known: Set<string>, lang
     suggestions: [],
   };
 }
+
+// ---------- Рекомендации по сайту (ТЗ 5.8 Д) ----------
+// В модель уходят только обезличенные сводные цифры: число просмотров разделов, запросы без результатов
+// (с вырезанными цифрами и адресами почты), доли ответов помощника. Персональных данных и закрытых документов нет.
+export async function adviseSite(stats: string): Promise<string | null> {
+  if (!hasModel) return null;
+  const system =
+    "Ты — аналитик сайта государственного архива. По сводной статистике дай 4–6 конкретных рекомендаций, как улучшить сайт: какие разделы дополнить, какие материалы оцифровать или опубликовать в первую очередь, какие запросы остаются без ответа и что с ними сделать. Пиши по-русски, коротко, каждый пункт с новой строки, начинай с «— ». Опирайся только на цифры из сводки, ничего не придумывай.";
+  try {
+    if (PROVIDER === "openrouter") {
+      const res = await fetch(`${process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"}/chat/completions`, {
+        method: "POST",
+        signal: AbortSignal.timeout(45_000),
+        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "X-Title": "Archive site analytics demo" },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [{ role: "system", content: system }, { role: "user", content: stats }],
+          max_tokens: 700,
+          temperature: 0.2,
+          provider: { data_collection: "deny" },
+        }),
+      });
+      if (!res.ok) return null;
+      const j = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      return j.choices?.[0]?.message?.content?.trim() || null;
+    }
+    if (client) {
+      const r = await client.messages.create({ model: MODEL, max_tokens: 700, system, messages: [{ role: "user", content: stats }] });
+      return r.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim() || null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}

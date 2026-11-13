@@ -17,6 +17,10 @@ const TYPES = [
   { mime: "image/webp", ext: "webp", test: (b: Buffer) => b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP" },
   { mime: "image/tiff", ext: "tif", test: (b: Buffer) => ["49492a00", "4d4d002a"].includes(b.subarray(0, 4).toString("hex")) },
   { mime: "application/pdf", ext: "pdf", test: (b: Buffer) => b.subarray(0, 5).toString("latin1") === "%PDF-" },
+  // аудио и видео (ТЗ 7.7): MP4, WebM, MP3
+  { mime: "video/mp4", ext: "mp4", test: (b: Buffer) => b.subarray(4, 8).toString("latin1") === "ftyp" },
+  { mime: "video/webm", ext: "webm", test: (b: Buffer) => b.subarray(0, 4).toString("hex") === "1a45dfa3" },
+  { mime: "audio/mpeg", ext: "mp3", test: (b: Buffer) => b.subarray(0, 3).toString("latin1") === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0) },
 ];
 
 export function detectType(b: Buffer) {

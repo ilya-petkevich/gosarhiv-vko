@@ -52,6 +52,10 @@ export function ExhibitionView({ items, t }: { items: ExhibitView[]; t: Showcase
               <img src={img} alt={cur.title} />
               <span className="exv-zoom"><Icon name="zoom" size={20} /> {t.zoom}</span>
             </button>
+          ) : cur.file && cur.mime?.startsWith("video/") ? (
+            <video className="exv-media" src={`/api/files/${cur.file}`} controls preload="metadata" aria-label={cur.title} />
+          ) : cur.file && cur.mime?.startsWith("audio/") ? (
+            <div className="exv-nocopy"><audio src={`/api/files/${cur.file}`} controls preload="metadata" aria-label={cur.title} /></div>
           ) : cur.file && cur.mime === "application/pdf" ? (
             <iframe src={`/api/files/${cur.file}`} title={cur.title} className="exv-pdf" />
           ) : (

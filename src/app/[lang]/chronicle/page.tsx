@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dict, isLang, pick, type Lang } from "@/i18n/dict";
 import { showcaseText } from "@/i18n/showcase";
-import { PERIODS, eventThemes, listCollections, listEvents } from "@/lib/showcase";
+import { PERIODS, eventThemes, listCollections, listEvents, listPersons } from "@/lib/showcase";
 import { Crumbs } from "@/components/CatalogParts";
 import { Icon } from "@/components/Icon";
 
@@ -24,7 +24,7 @@ export default async function Chronicle({ params, searchParams }: { params: Prom
   const d = dict(lang);
   const { p, th } = await searchParams;
   const period = PERIODS.some((x) => x.key === p) ? p : undefined;
-  const [cols, events, themes] = await Promise.all([listCollections(), listEvents(period, th), eventThemes()]);
+  const [cols, events, themes, persons] = await Promise.all([listCollections(), listEvents(period, th), eventThemes(), listPersons()]);
   const theme = themes.some((x) => x.slug === th) ? th : undefined;
   const href = (o: { p?: string; th?: string }) => {
     const u = new URLSearchParams();
@@ -66,6 +66,23 @@ export default async function Chronicle({ params, searchParams }: { params: Prom
                 </Link>
               );
             })}
+          </div>
+        </section>
+      ) : null}
+
+      {persons.length ? (
+        <section className="section" style={{ marginTop: 48 }} aria-labelledby="pers">
+          <div className="section-head">
+            <h2 id="pers">{t.persons}</h2>
+            <Link className="more" href={`/${lang}/chronicle/persons`}>{t.allPersons} ({persons.length}) <Icon name="arrow" size={20} /></Link>
+          </div>
+          <div className="person-grid" style={{ marginTop: 0 }}>
+            {persons.slice(0, 4).map((p) => (
+              <Link key={p.slug} href={`/${lang}/chronicle/persons/${p.slug}`} className="card person-card">
+                <span className="pc-ic"><Icon name="user" size={28} /></span>
+                <span><b>{pick(p.name, lang).text}</b>{p.years ? <span className="small muted">{p.years}</span> : null}</span>
+              </Link>
+            ))}
           </div>
         </section>
       ) : null}

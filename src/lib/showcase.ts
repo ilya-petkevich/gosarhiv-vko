@@ -14,13 +14,27 @@ const FIRST_FILE = `(select x.file_id from document_files x join digital_files m
 
 export type ExhibitionCard = { slug: string; title: L10n; description: L10n | null; is_demo: boolean; count: number; cover: number | null };
 
-export async function listExhibitions() {
+// фильтр по тематике и историческому периоду (ТЗ 5.7): период — по годам документов-экспонатов
+export async function listExhibitions(opts: { category?: string; period?: string } = {}) {
+  const cat = opts.category && /^[a-z-]{2,30}$/.test(opts.category) ? opts.category : null;
+  const p = PERIODS.find((x) => x.key === opts.period);
   return q<ExhibitionCard>(
     `select e.slug, e.title, e.description, e.is_demo,
             (select count(*)::int from exhibits x join documents d on d.id = x.document_id join funds f on f.id = d.fund_id where x.exhibition_id = e.id and ${DOC_VISIBLE} and ${FUND_VISIBLE}) as count,
             (select ${SERVED("coalesce(x.file_id, " + FIRST_FILE + ")")} from exhibits x join documents d on d.id = x.document_id join funds f on f.id = d.fund_id
               where x.exhibition_id = e.id and ${DOC_VISIBLE} and ${FUND_VISIBLE} order by x.sort limit 1) as cover
-     from exhibitions e where e.status = 'published' order by e.published_at desc nulls last, e.id`,
+     from exhibitions e left join categories c on c.id = e.category_id
+     where e.status = 'published' and ($1::text is null or c.slug = $1)
+       and ($2::int is null or exists (select 1 from exhibits x join documents d on d.id = x.document_id
+             where x.exhibition_id = e.id and coalesce(d.year_to, d.year_from) >= $2 and d.year_from <= $3))
+     order by e.published_at desc nulls last, e.id`,
+    [cat, p?.from ?? null, p?.to ?? null],
+  );
+}
+
+export async function exhibitionCategories() {
+  return q<{ slug: string; name: L10n }>(
+    `select c.slug, c.name from categories c where c.kind = 'exhibition' and exists (select 1 from exhibitions e where e.category_id = c.id and e.status = 'published') order by c.sort`,
   );
 }
 
@@ -113,4 +127,34 @@ export async function eventThemes() {
     `select c.slug, c.name, count(e.id)::int n from categories c left join historical_events e on e.category_id = c.id and e.status = 'published'
      where c.kind = 'chronicle' group by c.slug, c.name, c.sort order by c.sort`,
   );
+}
+
+// Исторические личности (ТЗ 5.6): отдельные страницы, связанные события хронологии и записи каталога
+export type PersonCard = { slug: string; name: L10n; years: string | null; biography: L10n | null; sources: string | null; match: string | null };
+
+export async function listPersons() {
+  return q<PersonCard>(`select slug, name, years, biography, sources, match from persons where status = 'published' order by sort, id`);
+}
+
+export async function getPerson(slug: string) {
+  if (!/^[a-z0-9-]{2,80}$/.test(slug)) return null;
+  const p = (await q<PersonCard>(`select slug, name, years, biography, sources, match from persons where slug = $1 and status = 'published'`, [slug]))[0];
+  if (!p) return null;
+  const m = p.match && p.match.length >= 3 ? `%${p.match.replace(/[\\%_]/g, "")}%` : null;
+  const [events, docs] = m
+    ? await Promise.all([
+        q<EventRow>(
+          `select e.slug, e.title, e.date_text, e.year, c.slug as theme, c.name as theme_name, e.sources
+           from historical_events e left join categories c on c.id = e.category_id
+           where e.status = 'published' and e.title->>'ru' ilike $1 order by e.year, e.id limit 20`,
+          [m],
+        ),
+        q<{ uid: string; title: L10n; date_text: string | null; cipher: string | null }>(
+          `select d.uid, d.title, d.date_text, d.cipher from documents d join funds f on f.id = d.fund_id
+           where ${DOC_VISIBLE} and ${FUND_VISIBLE} and (d.title->>'ru' ilike $1 or d.author ilike $1 or d.description->>'ru' ilike $1) order by d.year_from limit 12`,
+          [m],
+        ),
+      ])
+    : [[], []];
+  return { ...p, events, docs };
 }

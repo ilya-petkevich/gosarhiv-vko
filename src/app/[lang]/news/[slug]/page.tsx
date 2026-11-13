@@ -6,6 +6,7 @@ import { contentText } from "@/i18n/content";
 import { getNews } from "@/lib/content";
 import { Crumbs } from "@/components/CatalogParts";
 import { Md } from "@/components/Md";
+import { videoEmbed } from "@/lib/video";
 import { CopyButton } from "@/components/Viewer";
 
 export const dynamic = "force-dynamic";
@@ -45,11 +46,31 @@ export default async function NewsItem({ params }: P) {
         {n.summary ? <p className="lead" lang="ru">{pick(n.summary, lang).text}</p> : null}
         {body.fallback ? <p className="notice">{d.notVerifiedTranslation}</p> : null}
         <div lang={body.fallback ? "ru" : undefined}><Md text={body.text} lang={lang} /></div>
+        {videoEmbed(n.video_url) ? (
+          <div className="video-box">
+            <iframe src={videoEmbed(n.video_url)!} title={`${t.newsVideo}: ${title.text}`} loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+          </div>
+        ) : n.video_url ? (
+          <p><a href={n.video_url} rel="noopener" target="_blank">{t.newsVideo} ↗</a></p>
+        ) : null}
         <div className="acts-row" style={{ marginTop: 24 }}>
           <CopyButton label={d.cat.share} done={d.cat.linkCopied} icon="share" className="btn sec" />
           <Link className="btn sec" href={`/${lang}/news`}>{t.allNews}</Link>
         </div>
       </article>
+      {n.related.length ? (
+        <section className="section" aria-labelledby="rel-news" style={{ maxWidth: 860 }}>
+          <h2 id="rel-news" className="h3" style={{ marginBottom: 16 }}>{t.newsRelated}</h2>
+          <div className="news-list">
+            {n.related.map((r) => (
+              <article key={r.slug} className="card news-card">
+                <div className="tags"><time className="small muted" dateTime={r.iso}>{r.date}</time>{r.category_name ? <span className="tag">{pick(r.category_name, lang).text}</span> : null}</div>
+                <h3><Link href={`/${lang}/news/${r.slug}`}>{pick(r.title, lang).text}</Link></h3>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

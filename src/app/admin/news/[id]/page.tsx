@@ -17,8 +17,8 @@ export default async function EditNews({ params, searchParams }: { params: Promi
   const { e, m } = await searchParams;
   const isNew = id === "new";
   if (!isNew && !/^\d{1,9}$/.test(id)) notFound();
-  const n = isNew ? null : (await q<{ id: number; slug: string; title: { ru: string; kk?: string; en?: string }; summary: { ru?: string } | null; body: { ru?: string } | null; cat: string | null; branch_id: number | null; status: string; created_by: string | null }>(
-    `select n.id, n.slug, n.title, n.summary, n.body, c.slug cat, n.branch_id, n.status, n.created_by from news n left join categories c on c.id = n.category_id where n.id = $1`, [Number(id)],
+  const n = isNew ? null : (await q<{ id: number; slug: string; title: { ru: string; kk?: string; en?: string }; summary: { ru?: string } | null; body: { ru?: string } | null; video_url: string | null; cat: string | null; branch_id: number | null; status: string; created_by: string | null }>(
+    `select n.id, n.slug, n.title, n.summary, n.body, n.video_url, c.slug cat, n.branch_id, n.status, n.created_by from news n left join categories c on c.id = n.category_id where n.id = $1`, [Number(id)],
   ))[0];
   if (!isNew && !n) notFound();
   const ownOnly = can(u, "branches.edit_own") && !can(u, "branches.edit_all");
@@ -58,6 +58,7 @@ export default async function EditNews({ params, searchParams }: { params: Promi
           </div>
           <label className="fld"><span className="label">Кратко (одно-два предложения)</span><textarea name="summary_ru" rows={2} defaultValue={n?.summary?.ru ?? ""} maxLength={600} /></label>
           <label className="fld"><span className="label">Текст *</span><textarea name="body_ru" rows={10} defaultValue={n?.body?.ru ?? ""} maxLength={20000} /></label>
+          <label className="fld"><span className="label">Видео (ссылка на YouTube, Vimeo или Rutube)</span><input name="video_url" type="url" defaultValue={n?.video_url ?? ""} maxLength={300} placeholder="https://" /></label>
           <p className="small muted">Абзацы — через пустую строку. Подзаголовок — строка с «## », пункт списка — с «- », ссылка — [текст](адрес).</p>
           <div className="grid2">
             <label className="fld"><span className="label">Рубрика</span><select name="category" defaultValue={n?.cat ?? ""}><option value="">—</option>{cats.map((c) => <option key={c.slug} value={c.slug}>{c.name.ru}</option>)}</select></label>

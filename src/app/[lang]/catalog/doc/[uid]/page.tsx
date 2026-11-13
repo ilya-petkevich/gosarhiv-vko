@@ -7,6 +7,14 @@ import { Crumbs } from "@/components/CatalogParts";
 import { CopyButton, Viewer } from "@/components/Viewer";
 import { Icon } from "@/components/Icon";
 
+// язык документа хранится кодом (ru, kk …), подпись — на языке страницы
+const LANG_NAMES: Record<string, Record<string, string>> = {
+  ru: { ru: "русский", kk: "орыс тілі", en: "Russian" },
+  kk: { ru: "казахский", kk: "қазақ тілі", en: "Kazakh" },
+  de: { ru: "немецкий", kk: "неміс тілі", en: "German" },
+  en: { ru: "английский", kk: "ағылшын тілі", en: "English" },
+};
+
 export const dynamic = "force-dynamic";
 
 type P = { params: Promise<{ lang: string; uid: string }> };
@@ -50,7 +58,10 @@ export default async function DocPage({ params }: P) {
     [t.fields.type, t.types[doc.doc_type] ?? doc.doc_type],
     ...(doc.place ? [[t.fields.place, doc.place] as [string, string]] : []),
     ...(doc.author ? [[t.fields.author, doc.author] as [string, string]] : []),
+    ...(doc.language ? [[t.fields.language, LANG_NAMES[doc.language]?.[lang] ?? doc.language] as [string, string]] : []),
+    ...(doc.sheets ? [[t.fields.sheets, String(doc.sheets)] as [string, string]] : []),
     ...(doc.branch_name ? [[t.fields.storage, `${pick(doc.branch_name, lang).text}${doc.branch_address ? `, ${pick(doc.branch_address, lang).text}` : ""}`] as [string, string]] : []),
+    [t.fields.access, closedCount && !openFiles.length ? t.accessLimited : t.accessOpen],
     [t.fields.copyState, copyState],
     ...(doc.provenance ? [[t.fields.source, doc.provenance] as [string, string]] : []),
   ];
@@ -134,6 +145,12 @@ export default async function DocPage({ params }: P) {
           </dl>
 
           {desc.text ? <p lang={desc.fallback ? "ru" : undefined}>{desc.text}</p> : null}
+          {doc.history_note && pick(doc.history_note, lang).text ? (
+            <section className="history-note" aria-labelledby="hn">
+              <h2 id="hn" className="h3">{t.historyNote}</h2>
+              <p lang={pick(doc.history_note, lang).fallback ? "ru" : undefined}>{pick(doc.history_note, lang).text}</p>
+            </section>
+          ) : null}
           {doc.is_demo ? <p className="notice"><Icon name="help" size={20} /> {t.demoNote}</p> : null}
 
           <div className="acts-row">

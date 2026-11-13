@@ -30,8 +30,14 @@ export type BranchView = {
 
 const fullAddress = (b: BranchView) => `Казахстан, Восточно-Казахстанская область, ${b.address.replace(/^\d{6},\s*/, "")}`;
 const gis = (b: BranchView) => `https://2gis.kz/search/${encodeURIComponent(fullAddress(b))}`;
-const google = (b: BranchView, origin?: string) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress(b))}${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`;
+const google = (b: BranchView, origin?: string, mode?: string) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress(b))}${origin ? `&origin=${encodeURIComponent(origin)}` : ""}${mode ? `&travelmode=${mode}` : ""}`;
+
+// тип подразделения по названию (ТЗ 5.5, фильтр по типу)
+type Kind = "main" | "city" | "district" | "personnel";
+const kindOf = (b: BranchView): Kind =>
+  b.isMain ? "main" : /личному составу|жеке құрам|personnel/i.test(b.name) ? "personnel" : /район|аудан|district/i.test(b.name) ? "district" : "city";
+const norm = (s: string) => s.toLowerCase().replace(/ё/g, "е");
 
 function km(a: [number, number], b: [number, number]) {
   const R = 6371;
@@ -51,6 +57,14 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
   const [geo, setGeo] = useState<"idle" | "locating" | "denied" | "unsupported" | "done">("idle");
   const [nearest, setNearest] = useState<{ slug: string; dist: number } | null>(null);
   const [origin, setOrigin] = useState("");
+  const [mode, setMode] = useState("driving");
+  const [query, setQuery] = useState("");
+  const [kind, setKind] = useState<"all" | Kind>("all");
+  const [me, setMe] = useState<[number, number] | null>(null);
+  const kinds = (["main", "city", "district", "personnel"] as Kind[]).filter((k) => branches.some((b) => kindOf(b) === k));
+  const shown = branches.filter(
+    (b) => (kind === "all" || kindOf(b) === kind) && (!query.trim() || norm(`${b.name} ${b.short} ${b.address}`).includes(norm(query.trim()))),
+  );
 
   const cur = branches.find((b) => b.slug === selected) ?? branches[0];
 
@@ -125,6 +139,7 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const me: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setMe(me);
         let best: { slug: string; dist: number } | null = null;
         for (const b of branches) {
           if (b.lat == null || b.lng == null) continue;
@@ -172,7 +187,7 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
                 className="from"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  window.open(google(cur, origin.trim() || undefined), "_blank", "noopener");
+                  window.open(google(cur, origin.trim() || undefined, mode), "_blank", "noopener");
                 }}
               >
                 <label htmlFor="from" className="label">{t.fromAddress}</label>
@@ -180,17 +195,36 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
                   <input id="from" value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder={t.fromPlaceholder} autoComplete="street-address" />
                   <button className="btn" type="submit"><Icon name="route" size={20} /> {t.build}</button>
                 </div>
+                <label className="fld" style={{ marginTop: 10 }}>
+                  <span className="label">{t.mode}</span>
+                  <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                    {Object.entries(t.modes).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </label>
               </form>
               <div className="acts-row">
                 <a className="btn sec sm" href={gis(cur)} target="_blank" rel="noopener">{t.route2gis}<span className="sr"> ({t.external})</span></a>
-                <a className="btn sec sm" href={google(cur)} target="_blank" rel="noopener">{t.routeGoogle}<span className="sr"> ({t.external})</span></a>
+                <a className="btn sec sm" href={google(cur, undefined, mode)} target="_blank" rel="noopener">{t.routeGoogle}<span className="sr"> ({t.external})</span></a>
               </div>
             </div>
           ) : null}
         </div>
 
+        <div className="br-list-col">
+        <div className="br-filter">
+          <label className="fld">
+            <span className="label">{t.search}</span>
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchPlaceholder} />
+          </label>
+          <div className="chips-row" role="group" aria-label={t.listLabel}>
+            {(["all", ...kinds] as ("all" | Kind)[]).map((k) => (
+              <button key={k} type="button" className="chip" aria-pressed={kind === k} onClick={() => setKind(k)}>{t.types[k]}</button>
+            ))}
+          </div>
+        </div>
+        {!shown.length ? <p className="notice" role="status">{t.noneFound}</p> : null}
         <ul className="br-list" aria-label={t.listLabel}>
-          {branches.map((b) => (
+          {shown.map((b) => (
             <li key={b.slug} id={`br-${b.slug}`} className={`card br-item${b.slug === selected ? " on" : ""}`}>
               <button type="button" className="br-pick" onClick={() => setSelected(b.slug)} aria-pressed={b.slug === selected}>
                 <span className="pin-dot" aria-hidden="true" />
@@ -198,6 +232,7 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
                   {b.isMain ? <span className="tag red" style={{ marginBottom: 6 }}>{t.main}</span> : null}
                   <b>{b.name}</b>
                   <span className="small muted">{b.address}</span>
+                  {me && b.lat != null && b.lng != null ? <span className="small">≈ {km(me, [b.lat, b.lng]).toFixed(0)} {t.km}</span> : null}
                 </span>
               </button>
               <div className="br-meta small">
@@ -221,6 +256,7 @@ export function BranchesMap({ branches, t, lang }: { branches: BranchView[]; t: 
             </li>
           ))}
         </ul>
+        </div>
       </div>
     </div>
   );
