@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { dict, type Lang } from "@/i18n/dict";
 import { Icon } from "./Icon";
-import { LangSwitch, ThemeToggle } from "./SiteTools";
+import { LangSwitch, LowVisionToggle, ThemeToggle } from "./SiteTools";
 import { MainNav } from "./MainNav";
 import { MobileMenu, MobileBar } from "./MobileNav";
 import { ReadAloud } from "./ReadAloud";
@@ -13,7 +13,7 @@ export const SOCIAL = {
   facebook: "https://www.facebook.com/vkoarhiv",
 };
 
-export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | null }) {
+export function Header({ lang, theme, lv }: { lang: Lang; theme: "light" | "dark" | null; lv: boolean }) {
   const d = dict(lang);
   const nav = [
     { slug: "about", title: d.nav.about },
@@ -37,10 +37,9 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
             </span>
           </div>
           <div className="group">
+            <ThemeToggle initial={theme} labels={{ light: d.themeLight, dark: d.themeDark, title: d.themeLabel }} className="row tb-btn" />
             <ReadAloud lang={lang} labels={d.readAloud} />
-            <Link className="row" href={`/${lang}/accessibility`}>
-              <Icon name="eye" size={18} /> {d.lowVision}
-            </Link>
+            <LowVisionToggle initial={lv} labels={{ on: d.lowVision, off: d.lowVisionOff }} />
             <span className="row social">
               <a href={SOCIAL.instagram} aria-label="Instagram" rel="noopener" target="_blank"><Icon name="insta" size={20} /></a>
               <a href={SOCIAL.facebook} aria-label="Facebook" rel="noopener" target="_blank"><Icon name="fb" size={20} /></a>
@@ -57,7 +56,6 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
           </Link>
           <div className="tools">
             <LangSwitch lang={lang} label={d.langLabel} />
-            <ThemeToggle initial={theme} labels={{ light: d.themeLight, dark: d.themeDark, title: d.themeLabel }} />
             <Link className="btn sm catalog-btn" href={`/${lang}/catalog`}>
               <Icon name="search" size={20} /> {d.catalogBtn}
             </Link>
@@ -70,7 +68,7 @@ export function Header({ lang, theme }: { lang: Lang; theme: "light" | "dark" | 
                   <LangSwitch lang={lang} label={d.langLabel} />
                   <ThemeToggle initial={theme} labels={{ light: d.themeLight, dark: d.themeDark, title: d.themeLabel }} />
                   <ReadAloud lang={lang} labels={d.readAloud} className="m-row" />
-                  <Link className="m-row" href={`/${lang}/accessibility`}><Icon name="eye" size={20} /> {d.lowVision}</Link>
+                  <LowVisionToggle initial={lv} labels={{ on: d.lowVision, off: d.lowVisionOff }} className="m-row" />
                 </>
               }
             />
@@ -111,6 +109,13 @@ export function Footer({ lang }: { lang: Lang }) {
               {d.reception}: <a href="tel:+77232255976">8 (7232) 25-59-76</a>
               <br />
               <a href="mailto:arhiv-ukg@yandex.kz">arhiv-ukg@yandex.kz</a>
+            </span>
+            <span className="small">
+              {lang === "kk" ? "Дс–Жм 8:00–17:00, оқу залы 9:00–16:00" : lang === "en" ? "Mon–Fri 8:00–17:00, reading room 9:00–16:00" : "Пн–Пт 8:00–17:00, читальный зал 9:00–16:00"}
+            </span>
+            <span className="foot-social">
+              <a href={SOCIAL.instagram} rel="noopener" target="_blank"><Icon name="insta" size={20} /> Instagram</a>
+              <a href={SOCIAL.facebook} rel="noopener" target="_blank"><Icon name="fb" size={20} /> Facebook</a>
             </span>
           </div>
           <div className="col">

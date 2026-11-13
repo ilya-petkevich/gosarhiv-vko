@@ -36,7 +36,7 @@ export function LangSwitch({ lang, label }: { lang: Lang; label: string }) {
 
 type Theme = "light" | "dark";
 
-export function ThemeToggle({ initial, labels }: { initial: Theme | null; labels: { light: string; dark: string; title: string } }) {
+export function ThemeToggle({ initial, labels, className = "theme-btn" }: { initial: Theme | null; labels: { light: string; dark: string; title: string }; className?: string }) {
   const [theme, setTheme] = useState<Theme | null>(initial);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function ThemeToggle({ initial, labels }: { initial: Theme | null; labels
   return (
     <button
       type="button"
-      className="theme-btn"
+      className={className}
       aria-label={`${labels.title}: ${current === "dark" ? labels.dark : labels.light}`}
       onClick={() => {
         // меняем атрибут без перезагрузки — страница и введённый запрос остаются
@@ -60,8 +60,28 @@ export function ThemeToggle({ initial, labels }: { initial: Theme | null; labels
         setTheme(next);
       }}
     >
-      <Icon name={current === "dark" ? "moon" : "sun"} size={20} />
+      <Icon name={current === "dark" ? "moon" : "sun"} size={className === "theme-btn" ? 20 : 18} />
       {current === "dark" ? labels.dark : labels.light}
+    </button>
+  );
+}
+
+// Версия для слабовидящих: крупнее текст, выше контраст, без анимаций. Переключается без перезагрузки, выбор запоминается.
+export function LowVisionToggle({ initial, labels, className }: { initial: boolean; labels: { on: string; off: string }; className?: string }) {
+  const [on, setOn] = useState(initial);
+  return (
+    <button
+      type="button"
+      className={className ?? "row tb-btn"}
+      aria-pressed={on}
+      onClick={() => {
+        const next = !on;
+        document.documentElement.classList.toggle("lv", next);
+        document.cookie = `lv=${next ? 1 : 0}; path=/; max-age=31536000; samesite=lax`;
+        setOn(next);
+      }}
+    >
+      <Icon name="eye" size={18} /> {on ? labels.off : labels.on}
     </button>
   );
 }

@@ -765,3 +765,49 @@ button.chip { cursor: pointer; font: inherit; font-size: 14px; }
 .soc-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 24px 28px; }
 .soc-card h2 { font-size: 22px; margin-bottom: 4px; }
 .soc-links { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* Верхняя полоса: тема, диктор и версия для слабовидящих — одинаковые кнопки-ссылки */
+.tb-btn { display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.tb-btn[aria-pressed="true"] { font-weight: 700; }
+.foot-social { display: flex; gap: 18px; flex-wrap: wrap; }
+.foot-social a { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Первый экран: название, описание архива и фото (ТЗ 5.1, главный баннер) */
+.hero-intro { display: flex; gap: 40px; align-items: stretch; margin: 8px 0 28px; }
+.hero-intro .txt { flex: 1; min-width: 0; }
+.hero-intro h1 { font-size: 38px; line-height: 1.18; font-weight: 600; color: #fff; max-width: 720px; text-shadow: 0 1px 2px rgba(10,24,19,.35); }
+.hero-intro p { font-size: 18px; line-height: 1.6; max-width: 640px; margin-top: 14px; color: rgba(255,255,255,.94); text-shadow: 0 1px 2px rgba(10,24,19,.35); }
+.hero-intro .facts { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; padding: 0; }
+.hero-intro .facts li { padding: 7px 15px; border-radius: 999px; background: rgba(18,38,31,.45); border: 1px solid rgba(255,255,255,.18); font-size: 15px; font-weight: 500; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.collage { width: 540px; flex: none; display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: 290px; }
+.collage .ph { position: relative; border-radius: 18px; overflow: hidden; background: rgba(18,38,31,.4); color: #fff; }
+.collage .ph:first-child { grid-row: 1 / 3; }
+.collage .ph img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s var(--ease); }
+.collage .ph:hover img { transform: scale(1.04); }
+.collage .ph i { position: absolute; left: 10px; bottom: 10px; right: 10px; width: fit-content; font-style: normal; font-size: 13px; line-height: 1.35; padding: 4px 10px; border-radius: 8px; background: rgba(18,38,31,.78); }
+@media (max-width: 1100px) { .collage { width: 400px; height: 250px; } .hero-intro h1 { font-size: 32px; } }
+@media (max-width: 860px) { .hero-intro { flex-direction: column; gap: 20px; } .collage { width: 100%; height: 220px; } }
+@media (max-width: 640px) { .hero-intro { margin-bottom: 16px; } .hero-intro h1 { font-size: 22px; } .hero-intro p { font-size: 15px; line-height: 1.5; margin-top: 10px; } .hero-intro .facts { display: none; } .collage { display: none; } }
+
+/* Главная: карта филиалов рядом со списком и «Полезная информация» */
+.home-branches { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: stretch; }
+.mini-map-wrap { position: relative; min-height: 360px; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); }
+.mini-map { position: absolute; inset: 0; }
+@media (max-width: 900px) { .home-branches { grid-template-columns: 1fr; } .mini-map-wrap { min-height: 280px; } }
+.useful-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .useful-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .useful-grid { grid-template-columns: 1fr; } }
+.useful-card { display: flex; gap: 14px; align-items: flex-start; padding: 18px; color: var(--ink); }
+.useful-card:hover { text-decoration: none; border-color: var(--accent); }
+.useful-card .ib { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.useful-card b { display: block; margin-bottom: 4px; }
+
+/* Версия для слабовидящих: крупнее, контрастнее, без анимаций и полупрозрачности */
+html.lv body { zoom: 1.2; }
+html.lv { --muted: var(--ink); --line: #8C918B; }
+html.lv a:not(.btn):not(.tile):not(.card) { text-decoration: underline; }
+html.lv *, html.lv *::before, html.lv *::after { animation: none !important; transition: none !important; }
+html.lv .hero-fx { background: var(--band); }
+html.lv .hero-fx > * { display: none; }
+html.lv .hero .tile, html.lv .hero .quick a, html.lv .hero .chips a, html.lv .hero-intro .facts li { background: #12261F; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.lv img { filter: none; }

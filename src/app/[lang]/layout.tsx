@@ -33,12 +33,13 @@ export default async function LangLayout({ children, params }: { children: React
   const c = await cookies();
   const tc = c.get("theme")?.value;
   const theme = tc === "dark" || tc === "light" ? tc : null;
+  const lv = c.get("lv")?.value === "1";
 
   return (
-    <html lang={lang} data-theme={theme ?? undefined} className={`${onest.variable} ${literata.variable}`}>
+    <html lang={lang} data-theme={theme ?? undefined} className={`${onest.variable} ${literata.variable}${lv ? " lv" : ""}`}>
       <body>
         <a className="skip" href="#main">{lang === "kk" ? "Негізгі мазмұнға өту" : lang === "en" ? "Skip to content" : "Перейти к содержанию"}</a>
-        <Header lang={lang as Lang} theme={theme} />
+        <Header lang={lang as Lang} theme={theme} lv={lv} />
         <main id="main">{children}</main>
         <Footer lang={lang as Lang} />
         <KnigaGaze />

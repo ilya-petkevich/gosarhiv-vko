@@ -5,6 +5,8 @@ import { Icon, type IconName } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
 import { HeroShelf } from "@/components/HeroShelf";
 import { OFFICIAL, SOCIAL } from "@/components/Chrome";
+import { BranchesMini, type MiniPoint } from "@/components/BranchesMini";
+import { branchText } from "@/i18n/branches";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
 import { listCollections, listExhibitions } from "@/lib/showcase";
@@ -16,6 +18,7 @@ import { contentText } from "@/i18n/content";
 export const dynamic = "force-dynamic";
 
 type BranchRow = { slug: string; name: L10n; address: L10n; phone: string | null; lat: number | null; lng: number | null; coords_verified: boolean };
+type PointRow = { slug: string; name: L10n; short_name: L10n | null; lat: number; lng: number; is_main: boolean };
 
 export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params;
@@ -28,11 +31,17 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     `select slug, name, address, phone, lat, lng, coords_verified from branches where is_visible order by sort limit 6`,
   );
   const total = (await q<{ n: number }>(`select count(*)::int as n from branches where is_visible`))[0]?.n ?? 0;
+  const points: MiniPoint[] = (
+    await q<PointRow>(`select slug, name, short_name, lat, lng, is_main from branches where is_visible and lat is not null and lng is not null order by sort`)
+  ).map((r) => ({ slug: r.slug, short: pick(r.short_name ?? r.name, lang).text, lat: Number(r.lat), lng: Number(r.lng), isMain: r.is_main }));
+  const bt = branchText(lang);
   const [exhibitions, news, dates, cols, photos, digital] = await Promise.all([
     listExhibitions(), listNews({ limit: 3 }), upcomingDates(4), listCollections(),
     searchDocuments({ q: "", docType: "photo", copy: true }), searchDocuments({ q: "", copy: true, sort: "old" }),
   ]);
   const st = showcaseText(lang);
+  const heroDoc = digital.rows.find((r) => r.preview_id && r.doc_type !== "photo");
+  const heroPhoto = photos.rows.find((r) => r.preview_id);
   const ct = contentText(lang);
   const MONTHS = "января февраля марта апреля мая июня июля августа сентября октября ноября декабря".split(" ");
   const MONTHS_NOM = "январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь".split(" ");
@@ -58,8 +67,35 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <div className="hero-fx" aria-hidden="true">
           <HeroShelf />
         </div>
-        <h1 id="hero-title" className="sr">{d.orgName}</h1>
         <div className="wrap">
+          <div className="hero-intro">
+            <div className="txt">
+              <h1 id="hero-title" className="serif">{d.orgName}</h1>
+              <p>{d.heroLead}</p>
+              <ul className="facts">{d.heroFacts.map((f) => <li key={f}>{f}</li>)}</ul>
+            </div>
+            <div className="collage">
+              <Link className="ph" href={L("about/history")}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/img/building-main-1.jpg" alt={d.heroPhotos[0]} />
+                <i>{d.heroPhotos[0]}</i>
+              </Link>
+              {heroDoc ? (
+                <Link className="ph" href={L(`catalog/doc/${heroDoc.uid}`)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/files/${heroDoc.preview_id}`} alt={pick(heroDoc.title, lang).text} />
+                  <i>{d.heroPhotos[1]}</i>
+                </Link>
+              ) : null}
+              {heroPhoto ? (
+                <Link className="ph" href={L(`catalog/doc/${heroPhoto.uid}`)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/files/${heroPhoto.preview_id}`} alt={pick(heroPhoto.title, lang).text} />
+                  <i>{d.heroPhotos[2]}</i>
+                </Link>
+              ) : null}
+            </div>
+          </div>
           <nav className="tiles" aria-label={d.helpTitle}>
             {tiles.map(([icon, title, href]) => (
               <Link key={href} className="tile" href={L(href)}>
@@ -232,6 +268,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           <h2 id="br-title">{d.branchesTitle}</h2>
           <Link className="more" href={L("branches")}>{d.allBranches} ({total}) <Icon name="arrow" size={20} /></Link>
         </div>
+        <div className="home-branches">
+        {points.length ? <BranchesMini points={points} lang={lang} label={bt.mapLabel} error={bt.mapError} /> : null}
         <div className="card branch-list">
           {branches.map((b) => {
             const name = pick(b.name, lang);
@@ -249,6 +287,19 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               </div>
             );
           })}
+        </div>
+        </div>
+      </section>
+
+      <section className="wrap section" aria-labelledby="useful-title">
+        <div className="section-head"><h2 id="useful-title">{d.usefulTitle}</h2></div>
+        <div className="useful-grid">
+          {d.usefulItems.map(([title, sub, href], i) => (
+            <Link key={title} className="card useful-card" href={L(href)}>
+              <span className="ib"><Icon name={(["search", "folder", "image", "pin"] as IconName[])[i]} size={24} /></span>
+              <span><b>{title}</b><span className="small muted">{sub}</span></span>
+            </Link>
+          ))}
         </div>
       </section>
 
