@@ -4,10 +4,11 @@ import { q } from "@/lib/db";
 import { Icon, type IconName } from "@/components/Icon";
 import { Kniga } from "@/components/Kniga";
 import { HeroShelf } from "@/components/HeroShelf";
-import { OFFICIAL } from "@/components/Chrome";
+import { OFFICIAL, SOCIAL } from "@/components/Chrome";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
-import { listExhibitions } from "@/lib/showcase";
+import { listCollections, listExhibitions } from "@/lib/showcase";
+import { searchDocuments } from "@/lib/catalog";
 import { listNews, upcomingDates } from "@/lib/content";
 import { showcaseText } from "@/i18n/showcase";
 import { contentText } from "@/i18n/content";
@@ -27,7 +28,10 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     `select slug, name, address, phone, lat, lng, coords_verified from branches where is_visible order by sort limit 6`,
   );
   const total = (await q<{ n: number }>(`select count(*)::int as n from branches where is_visible`))[0]?.n ?? 0;
-  const [exhibitions, news, dates] = await Promise.all([listExhibitions(), listNews({ limit: 3 }), upcomingDates(4)]);
+  const [exhibitions, news, dates, cols, photos, digital] = await Promise.all([
+    listExhibitions(), listNews({ limit: 3 }), upcomingDates(4), listCollections(),
+    searchDocuments({ q: "", docType: "photo", copy: true }), searchDocuments({ q: "", copy: true, sort: "old" }),
+  ]);
   const st = showcaseText(lang);
   const ct = contentText(lang);
   const MONTHS = "января февраля марта апреля мая июня июля августа сентября октября ноября декабря".split(" ");
@@ -132,6 +136,32 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </div>
         </div>
       </div>
+
+      <section className="wrap section" aria-labelledby="hd-title">
+        <div className="section-head"><h2 id="hd-title">{st.hdTitle}</h2></div>
+        <div className="hd-grid">
+          {([
+            ["chronicle", cols.find((c) => c.cover)?.cover ?? null, ""],
+            ["chronicle#timeline", digital.rows.find((r) => r.preview_id && r.doc_type !== "photo")?.preview_id ?? null, ""],
+            ["catalog?doc_type=photo&copy=1", (photos.rows.find((r) => r.preview_id && r.preview_id !== cols.find((c) => c.cover)?.cover) ?? photos.rows.find((r) => r.preview_id))?.preview_id ?? null, `${photos.total} ${st.hdCount}`],
+            ["catalog?copy=1", digital.rows.filter((r) => r.preview_id)[1]?.preview_id ?? null, `${digital.total} ${st.hdCount}`],
+          ] as [string, number | null, string][]).map(([href, cover, n], i) => (
+            <Link key={href} href={L(href)} className="card sc-card hd-card">
+              <span className="sc-cover">
+                {cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`/api/files/${cover}`} alt="" loading="lazy" />
+                ) : <Icon name={(["history", "folder", "image", "doc"] as IconName[])[i]} size={40} />}
+              </span>
+              <span className="sc-body">
+                {n ? <span className="tags"><span className="tag">{n}</span></span> : null}
+                <b>{st.hdItems[i][0]}</b>
+                <span className="small muted">{st.hdItems[i][1]}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {exhibitions.length ? (
         <section className="wrap section" aria-labelledby="ex-title">
@@ -241,6 +271,19 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               <span className="small muted">{o.host} ↗</span>
             </a>
           ))}
+        </div>
+      </section>
+
+      <section className="wrap section soc-block" aria-labelledby="soc-title">
+        <div className="card soc-card">
+          <div>
+            <h2 id="soc-title">{st.socTitle}</h2>
+            <p className="muted">{st.socLead}</p>
+          </div>
+          <div className="soc-links">
+            <a className="btn sec" href={SOCIAL.instagram} rel="noopener" target="_blank"><Icon name="insta" size={22} /> Instagram</a>
+            <a className="btn sec" href={SOCIAL.facebook} rel="noopener" target="_blank"><Icon name="fb" size={22} /> Facebook</a>
+          </div>
         </div>
       </section>
     </>
