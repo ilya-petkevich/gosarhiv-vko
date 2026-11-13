@@ -88,7 +88,7 @@ export default async function Dashboard() {
         {kpis.map((k, i) => (
           <Link key={k.l} href={k.href} className={`card kpi ${k.c}`} style={{ animationDelay: `${i * 0.05}s` }}>
             <span className="ib"><Icon name={k.icon} size={20} /></span>
-            <span className="n">{k.n.toLocaleString("ru-RU")}</span>
+            <span className="n">{(k.n ?? 0).toLocaleString("ru-RU")}</span>
             <span className="l">{k.l}</span>
           </Link>
         ))}

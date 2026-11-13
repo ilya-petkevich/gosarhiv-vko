@@ -58,7 +58,7 @@ async function makePostgres(url: string): Promise<Db> {
 
   // После простоя (функция была заморожена) старые соединения почти наверняка мертвы:
   // пул открывается заново до запроса, а не после 20 с ожидания.
-  const staleMs = Number(process.env.DB_STALE_MS || 15000);
+  const staleMs = Number(process.env.DB_STALE_MS || 4000);
   let lastUsed = Date.now();
   let inFlight = 0;
   const fresh = () => {
@@ -74,6 +74,11 @@ async function makePostgres(url: string): Promise<Db> {
   // Vercel замораживает функцию между запросами; пулер за это время рвёт простаивающее соединение,
   // и запрос в «мёртвый» сокет ждал ответа до лимита функции (300 с). Поэтому — свой таймаут:
   // зависшее соединение сбрасывается вместе с пулом, запрос на чтение повторяется один раз на новом.
+  // обрыв соединения (пулер закрыл сокет, пул сброшен соседним запросом) — чтение можно повторить
+  const retryable = (e: unknown) =>
+    ["DB_STALL", "CONNECTION_DESTROYED", "CONNECTION_CLOSED", "CONNECTION_ENDED", "ECONNRESET", "EPIPE"].includes(
+      String((e as { code?: string }).code),
+    );
   const clientMs = statementMs + 5000;
   const guard = async <T,>(run: (s: typeof sql) => Promise<T>, ms: number): Promise<T> => {
     fresh();
@@ -88,10 +93,11 @@ async function makePostgres(url: string): Promise<Db> {
         }),
       ]);
     } catch (e) {
-      if ((e as { code?: string }).code === "DB_STALL" && sql === cur) {
-        console.error("db: соединение зависло — пул пересоздан");
+      if (retryable(e) && sql === cur) {
+        console.error(`db: ${(e as { code?: string }).code} — пул пересоздан`);
         sql = open();
-        cur.end({ timeout: 0 }).catch(() => {});
+        // соседние запросы на старом пуле не обрываются сразу — им даётся 5 с
+        cur.end({ timeout: 5 }).catch(() => {});
       }
       throw e;
     } finally {
@@ -101,16 +107,19 @@ async function makePostgres(url: string): Promise<Db> {
     }
   };
   const readOnly = (text: string) => /^\s*select\b/i.test(text);
+  // чтения короткие: зависший сокет распознаётся за 8 с, а не за 20
+  const readMs = Number(process.env.DB_READ_STALL_MS || 8000);
 
   return {
     kind: "postgres",
     async query<T>(text: string, params: unknown[] = []) {
       const run = (s: typeof sql) => s.unsafe(text, params as never[]) as unknown as Promise<T[]>;
+      if (!readOnly(text)) return guard(run, clientMs);
       try {
-        return await guard(run, clientMs);
+        return await guard(run, readMs);
       } catch (e) {
-        if ((e as { code?: string }).code === "DB_STALL" && readOnly(text)) return guard(run, clientMs);
-        throw e;
+        if (!retryable(e)) throw e;
+        return guard(run, clientMs);
       }
     },
     async exec(text: string) {
