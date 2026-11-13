@@ -9,7 +9,7 @@ import { BranchesMini, type MiniPoint } from "@/components/BranchesMini";
 import { branchText } from "@/i18n/branches";
 import { VoiceButton } from "@/components/VoiceButton";
 import { notFound } from "next/navigation";
-import { listCollections, listExhibitions } from "@/lib/showcase";
+import { listExhibitions } from "@/lib/showcase";
 import { searchDocuments } from "@/lib/catalog";
 import { listNews, upcomingDates } from "@/lib/content";
 import { showcaseText } from "@/i18n/showcase";
@@ -35,8 +35,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     await q<PointRow>(`select slug, name, short_name, lat, lng, is_main from branches where is_visible and lat is not null and lng is not null order by sort`)
   ).map((r) => ({ slug: r.slug, short: pick(r.short_name ?? r.name, lang).text, lat: Number(r.lat), lng: Number(r.lng), isMain: r.is_main }));
   const bt = branchText(lang);
-  const [exhibitions, news, dates, cols, photos, digital] = await Promise.all([
-    listExhibitions(), listNews({ limit: 3 }), upcomingDates(4), listCollections(),
+  const [exhibitions, news, dates, photos, digital] = await Promise.all([
+    listExhibitions(), listNews({ limit: 3 }), upcomingDates(4),
     searchDocuments({ q: "", docType: "photo", copy: true }), searchDocuments({ q: "", copy: true, sort: "old" }),
   ]);
   const st = showcaseText(lang);
@@ -184,17 +184,14 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <div className="section-head"><h2 id="hd-title">{st.hdTitle}</h2></div>
         <div className="hd-grid">
           {([
-            ["chronicle", cols.find((c) => c.cover)?.cover ?? null, ""],
-            ["chronicle#timeline", digital.rows.find((r) => r.preview_id && r.doc_type !== "photo")?.preview_id ?? null, ""],
-            ["catalog?doc_type=photo&copy=1", (photos.rows.find((r) => r.preview_id && r.preview_id !== cols.find((c) => c.cover)?.cover) ?? photos.rows.find((r) => r.preview_id))?.preview_id ?? null, `${photos.total} ${st.hdCount}`],
-            ["catalog?copy=1", digital.rows.filter((r) => r.preview_id)[1]?.preview_id ?? null, `${digital.total} ${st.hdCount}`],
-          ] as [string, number | null, string][]).map(([href, cover, n], i) => (
+            ["chronicle", "book", ""],
+            ["chronicle#timeline", "history", ""],
+            ["catalog?doc_type=photo&copy=1", "image", `${photos.total} ${st.hdCount}`],
+            ["catalog?copy=1", "doc", `${digital.total} ${st.hdCount}`],
+          ] as [string, IconName, string][]).map(([href, icon, n], i) => (
             <Link key={href} href={L(href)} className="card sc-card hd-card">
-              <span className="sc-cover">
-                {cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/api/files/${cover}`} alt="" loading="lazy" />
-                ) : <Icon name={(["history", "folder", "image", "doc"] as IconName[])[i]} size={40} />}
+              <span className={`hd-art t${i}`} aria-hidden="true">
+                <Icon name={icon} size={56} stroke={1.3} />
               </span>
               <span className="sc-body">
                 {n ? <span className="tags"><span className="tag">{n}</span></span> : null}

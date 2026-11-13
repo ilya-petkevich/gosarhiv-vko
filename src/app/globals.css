@@ -846,3 +846,16 @@ html.lv img { filter: none; }
 .bars .bar { flex: 1; height: 8px; border-radius: 4px; background: var(--alt); overflow: hidden; }
 .bars .bar i { display: block; height: 100%; background: var(--accent); }
 .bars li > b { margin-left: auto; }
+/* «История в документах»: иллюстрированные обложки в цветах сайта вместо демо-картинок */
+.hd-art { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; color: var(--accent); background: var(--accent-soft); }
+.hd-art::before, .hd-art::after { content: ""; position: absolute; border-radius: 50%; border: 1.5px solid currentColor; opacity: .14; }
+.hd-art::before { width: 70%; aspect-ratio: 1; right: -18%; top: -30%; }
+.hd-art::after { width: 46%; aspect-ratio: 1; left: -10%; bottom: -26%; }
+.hd-art svg { position: relative; transition: transform .4s var(--ease); }
+.hd-card:hover .hd-art svg { transform: scale(1.08) rotate(-3deg); }
+.hd-art.t1 { color: var(--brand); background: var(--brand-soft); }
+.hd-art.t2 { color: var(--ochre); background: #F3EBDD; }
+.hd-art.t3 { color: #2D5F73; background: #E3EEF2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hd-art.t2 { background: #2E2A22; } :root:not([data-theme="light"]) .hd-art.t3 { color: #8EC3D6; background: #1F2E34; } }
+:root[data-theme="dark"] .hd-art.t2 { background: #2E2A22; }
+:root[data-theme="dark"] .hd-art.t3 { color: #8EC3D6; background: #1F2E34; }
