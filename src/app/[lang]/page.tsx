@@ -40,8 +40,6 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     searchDocuments({ q: "", docType: "photo", copy: true }), searchDocuments({ q: "", copy: true, sort: "old" }),
   ]);
   const st = showcaseText(lang);
-  const heroDoc = digital.rows.find((r) => r.preview_id && r.doc_type !== "photo");
-  const heroPhoto = photos.rows.find((r) => r.preview_id);
   const ct = contentText(lang);
   const MONTHS = "января февраля марта апреля мая июня июля августа сентября октября ноября декабря".split(" ");
   const MONTHS_NOM = "январь февраль март апрель май июнь июль август сентябрь октябрь ноябрь декабрь".split(" ");
@@ -67,35 +65,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <div className="hero-fx" aria-hidden="true">
           <HeroShelf />
         </div>
+        <h1 id="hero-title" className="sr">{d.orgName}</h1>
         <div className="wrap">
-          <div className="hero-intro">
-            <div className="txt">
-              <h1 id="hero-title" className="serif">{d.orgName}</h1>
-              <p>{d.heroLead}</p>
-              <ul className="facts">{d.heroFacts.map((f) => <li key={f}>{f}</li>)}</ul>
-            </div>
-            <div className="collage">
-              <Link className="ph" href={L("about/history")}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/img/building-main-1.jpg" alt={d.heroPhotos[0]} />
-                <i>{d.heroPhotos[0]}</i>
-              </Link>
-              {heroDoc ? (
-                <Link className="ph" href={L(`catalog/doc/${heroDoc.uid}`)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/api/files/${heroDoc.preview_id}`} alt={pick(heroDoc.title, lang).text} />
-                  <i>{d.heroPhotos[1]}</i>
-                </Link>
-              ) : null}
-              {heroPhoto ? (
-                <Link className="ph" href={L(`catalog/doc/${heroPhoto.uid}`)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/api/files/${heroPhoto.preview_id}`} alt={pick(heroPhoto.title, lang).text} />
-                  <i>{d.heroPhotos[2]}</i>
-                </Link>
-              ) : null}
-            </div>
-          </div>
           <nav className="tiles" aria-label={d.helpTitle}>
             {tiles.map(([icon, title, href]) => (
               <Link key={href} className="tile" href={L(href)}>
